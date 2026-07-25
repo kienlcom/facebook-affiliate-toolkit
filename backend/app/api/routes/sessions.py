@@ -30,6 +30,15 @@ async def create_session(
     return session_response(session)
 
 
+@router.get("/active", response_model=SessionResponse | None)
+async def active_session(
+    service: SessionService = Depends(get_session_service),
+) -> SessionResponse | None:
+    account = await service.get_local_account()
+    session = await service.get_active(account.id)
+    return session_response(session) if session is not None else None
+
+
 @router.post("/{session_id}/stop", response_model=SessionResponse)
 async def stop_session(
     session_id: UUID,

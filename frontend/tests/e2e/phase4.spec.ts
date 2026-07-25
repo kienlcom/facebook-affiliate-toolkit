@@ -77,6 +77,7 @@ async function mockApi(page: Page): Promise<void> {
   await page.route('**/health', (route) => fulfillJson(route, { status: 'ok' }))
   await page.route('**/api/account/profile', (route) => fulfillJson(route, account))
   await page.route('**/api/profiles', (route) => fulfillJson(route, [profile]))
+  await page.route('**/api/sessions/active', (route) => fulfillJson(route, null))
   await page.route(`**/api/sessions/${sessionId}/summary`, (route) =>
     fulfillJson(route, summary)
   )

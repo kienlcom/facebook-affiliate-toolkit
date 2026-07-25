@@ -85,6 +85,9 @@ def test_rest_fetch_dedup_state_actions_warning_and_websocket() -> None:
             )
             assert created.status_code == 201
             session_id = created.json()["id"]
+            active = client.get("/api/sessions/active")
+            assert active.status_code == 200
+            assert active.json()["id"] == session_id
 
             with client.websocket_connect(f"/ws/sessions/{session_id}") as websocket:
                 fetched = client.post(f"/api/sessions/{session_id}/fetch")

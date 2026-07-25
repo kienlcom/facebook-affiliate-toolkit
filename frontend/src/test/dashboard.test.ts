@@ -9,7 +9,10 @@ const apiMock = vi.hoisted(() => ({
   health: vi.fn(),
   accountProfile: vi.fn(),
   profiles: vi.fn(),
-  createSession: vi.fn()
+  activeSession: vi.fn(),
+  createSession: vi.fn(),
+  stopSession: vi.fn(),
+  sessionSummary: vi.fn()
 }))
 
 vi.mock('vue-router', () => ({
@@ -43,6 +46,7 @@ describe('DashboardView', () => {
         settlement_threshold: 5
       }
     ])
+    apiMock.activeSession.mockResolvedValue(null)
     apiMock.createSession.mockResolvedValue({
       id: 'session-id',
       account_id: 'account-id',
@@ -53,6 +57,40 @@ describe('DashboardView', () => {
       stop_reason: null,
       limits: { max_jobs: 20, max_duration_minutes: 30 }
     })
+    apiMock.stopSession.mockResolvedValue({
+      id: 'session-id',
+      account_id: 'account-id',
+      status: 'STOPPED',
+      profile_key: 'facebook_page',
+      started_at: '2026-07-25T12:00:00Z',
+      ended_at: '2026-07-25T12:10:00Z',
+      stop_reason: 'USER_REQUESTED',
+      limits: { max_jobs: 20, max_duration_minutes: 30 }
+    })
+    apiMock.sessionSummary.mockResolvedValue({
+      session: {
+        id: 'session-id',
+        account_id: 'account-id',
+        status: 'STOPPED',
+        profile_key: 'facebook_page',
+        started_at: '2026-07-25T12:00:00Z',
+        ended_at: '2026-07-25T12:10:00Z',
+        stop_reason: 'USER_REQUESTED',
+        limits: { max_jobs: 20, max_duration_minutes: 30 }
+      },
+      counters: {
+        fetched: 0,
+        opened: 0,
+        confirmed: 0,
+        claimed: 0,
+        failed: 0,
+        points_earned: 0
+      },
+      elapsed_seconds: 600,
+      remaining_jobs: 20,
+      jobs: []
+    })
+    apiMock.stopSession.mockClear()
   })
 
   it('loads dashboard data and starts a session', async () => {
@@ -73,5 +111,69 @@ describe('DashboardView', () => {
       name: 'session',
       params: { id: 'session-id' }
     })
+  })
+
+  it('resumes or stops the active session from the dashboard', async () => {
+    apiMock.activeSession.mockResolvedValue({
+      id: 'active-session-id',
+      account_id: 'account-id',
+      status: 'RUNNING',
+      profile_key: 'facebook_page',
+      started_at: '2026-07-25T12:00:00Z',
+      ended_at: null,
+      stop_reason: null,
+      limits: { max_jobs: 20, max_duration_minutes: 30 }
+    })
+    apiMock.stopSession.mockResolvedValue({
+      id: 'active-session-id',
+      account_id: 'account-id',
+      status: 'STOPPED',
+      profile_key: 'facebook_page',
+      started_at: '2026-07-25T12:00:00Z',
+      ended_at: '2026-07-25T12:10:00Z',
+      stop_reason: 'USER_REQUESTED',
+      limits: { max_jobs: 20, max_duration_minutes: 30 }
+    })
+    apiMock.sessionSummary.mockResolvedValue({
+      session: {
+        id: 'active-session-id',
+        account_id: 'account-id',
+        status: 'STOPPED',
+        profile_key: 'facebook_page',
+        started_at: '2026-07-25T12:00:00Z',
+        ended_at: '2026-07-25T12:10:00Z',
+        stop_reason: 'USER_REQUESTED',
+        limits: { max_jobs: 20, max_duration_minutes: 30 }
+      },
+      counters: {
+        fetched: 5,
+        opened: 5,
+        confirmed: 5,
+        claimed: 5,
+        failed: 0,
+        points_earned: 10500
+      },
+      elapsed_seconds: 600,
+      remaining_jobs: 15,
+      jobs: []
+    })
+    apiMock.stopSession.mockClear()
+
+    const wrapper = mount(DashboardView, {
+      global: { plugins: [createPinia()] }
+    })
+    await flushPromises()
+
+    expect(wrapper.find('.start-button').exists()).toBe(false)
+    await wrapper.get('.resume-button').trigger('click')
+    expect(push).toHaveBeenCalledWith({
+      name: 'session',
+      params: { id: 'active-session-id' }
+    })
+
+    await wrapper.get('.dashboard-stop-button').trigger('click')
+    await flushPromises()
+    expect(apiMock.stopSession).toHaveBeenCalledWith('active-session-id')
+    expect(wrapper.find('.start-button').exists()).toBe(true)
   })
 })

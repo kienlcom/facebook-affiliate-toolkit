@@ -74,6 +74,10 @@ export const api = {
     return (await http.post<Session>('/api/sessions', { profile_key: profileKey })).data
   },
 
+  async activeSession(): Promise<Session | null> {
+    return (await http.get<Session | null>('/api/sessions/active')).data
+  },
+
   async sessionSummary(sessionId: string): Promise<SessionSummary> {
     return (await http.get<SessionSummary>(`/api/sessions/${sessionId}/summary`)).data
   },

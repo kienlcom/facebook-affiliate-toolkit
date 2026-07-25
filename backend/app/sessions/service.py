@@ -112,6 +112,18 @@ class SessionService:
                 raise NotFoundError("SESSION_NOT_FOUND", "Session does not exist")
             return session
 
+    async def get_active(self, account_id: UUID) -> Session | None:
+        async with self._session_factory() as db:
+            return await db.scalar(
+                select(Session)
+                .where(
+                    Session.account_id == account_id,
+                    Session.status == SessionStatus.RUNNING,
+                )
+                .order_by(Session.started_at.desc())
+                .limit(1)
+            )
+
     async def stop(self, session_id: UUID, reason: str) -> Session:
         now = datetime.now(UTC)
         async with self._session_factory() as db:

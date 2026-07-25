@@ -10,6 +10,21 @@ export const useSessionStore = defineStore('session', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
+  async function loadActive(): Promise<Session | null> {
+    loading.value = true
+    error.value = null
+    try {
+      current.value = await api.activeSession()
+      return current.value
+    } catch (caught) {
+      const normalized = normalizeApiError(caught)
+      error.value = normalized.message
+      throw normalized
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function start(profileKey: string): Promise<Session> {
     loading.value = true
     error.value = null
@@ -71,5 +86,15 @@ export const useSessionStore = defineStore('session', () => {
     }
   }
 
-  return { current, summary, loading, error, start, refresh, stop, reportWarning }
+  return {
+    current,
+    summary,
+    loading,
+    error,
+    loadActive,
+    start,
+    refresh,
+    stop,
+    reportWarning
+  }
 })

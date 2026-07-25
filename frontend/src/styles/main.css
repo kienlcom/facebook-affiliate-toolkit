@@ -399,6 +399,35 @@ button:focus-visible {
   margin-left: auto;
 }
 
+.active-session-summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 5px 12px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.active-session-summary span,
+.active-session-summary small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.active-session-summary strong {
+  font-size: 13px;
+}
+
+.active-session-summary small {
+  grid-column: 1 / -1;
+}
+
+.start-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
 .danger-icon {
   color: var(--red);
 }
