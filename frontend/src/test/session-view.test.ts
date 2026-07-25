@@ -111,8 +111,8 @@ describe('SessionView', () => {
     })
   })
 
-  it('opens Facebook with isolation flags and reports opened only after popup succeeds', async () => {
-    const openSpy = vi.spyOn(window, 'open').mockReturnValue({} as Window)
+  it('opens Facebook with isolation flags and records the explicit open command', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null)
     const pinia = createPinia()
     setActivePinia(pinia)
     useAccountStore().profiles = [

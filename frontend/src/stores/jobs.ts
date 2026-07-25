@@ -12,6 +12,17 @@ const activePriority = [
   'RETRY_WAIT',
   'VALIDATED'
 ]
+const activeStates = new Set([
+  'FETCHED',
+  'VALIDATED',
+  'OPENING',
+  'OPENED',
+  'WAITING_USER',
+  'USER_CONFIRMED',
+  'CLAIM_PENDING',
+  'CLAIMING',
+  'RETRY_WAIT'
+])
 
 export const useJobsStore = defineStore('jobs', () => {
   const jobs = ref<Job[]>([])
@@ -33,6 +44,7 @@ export const useJobsStore = defineStore('jobs', () => {
     }
     return selected ?? jobs.value[0] ?? null
   })
+  const hasActiveJobs = computed(() => jobs.value.some((job) => activeStates.has(job.state)))
 
   function setJobs(nextJobs: Job[]): void {
     jobs.value = nextJobs
@@ -104,6 +116,7 @@ export const useJobsStore = defineStore('jobs', () => {
     jobs,
     selectedId,
     current,
+    hasActiveJobs,
     claimResult,
     busy,
     error,

@@ -19,12 +19,15 @@ target_metadata = Base.metadata
 
 
 def read_database_url() -> str:
+    configured_url = os.environ.get("DATABASE_URL")
+    if configured_url:
+        return configured_url
     env_path = Path(__file__).resolve().parents[3] / ".env"
     if env_path.exists():
         for line in env_path.read_text(encoding="utf-8").splitlines():
             if line.startswith("DATABASE_URL="):
                 return line.split("=", 1)[1].strip()
-    return os.environ.get("DATABASE_URL", "postgresql+asyncpg://tds:tds@localhost:5432/tds_assistant")
+    return "postgresql+asyncpg://tds:tds@localhost:5432/tds_assistant"
 
 
 def sync_database_url(url: str) -> str:

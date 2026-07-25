@@ -66,6 +66,21 @@ class SessionService:
                     "Account is not available for a new session",
                     details={"account_status": account.status},
                 )
+            running_session = await db.scalar(
+                select(Session)
+                .where(
+                    Session.account_id == account.id,
+                    Session.status == SessionStatus.RUNNING,
+                )
+                .order_by(Session.started_at)
+                .limit(1)
+            )
+            if running_session is not None:
+                raise ConflictError(
+                    "SESSION_ALREADY_RUNNING",
+                    "Stop the current session before starting another",
+                    details={"session_id": str(running_session.id)},
+                )
             session = Session(
                 account_id=account.id,
                 profile_key=profile.key,

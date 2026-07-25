@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.errors import ConflictError, NotFoundError
 from app.db.models import Account, Job, Session
-from app.jobs.state_machine import JobState, StateConflictError, transition
+from app.jobs.state_machine import ACTIVE_STATES, JobState, StateConflictError, transition
 from app.platforms.facebook.urls import validate_facebook_url
 from app.providers.tds.client import TDSClient
 from app.providers.tds.errors import TDSAuthError, TDSCircuitOpenError, TDSRateLimitError
@@ -247,18 +247,19 @@ class JobsService:
                 "Account is protection-stopped",
             )
 
-        waiting_count = await db.scalar(
+        active_count = await db.scalar(
             select(func.count())
             .select_from(Job)
             .where(
                 Job.session_id == session.id,
-                Job.state == JobState.WAITING_USER,
+                Job.state.in_([state.value for state in ACTIVE_STATES]),
             )
         )
-        if waiting_count:
+        if active_count:
             raise ConflictError(
-                "JOB_WAITING_USER",
-                "Resolve the current waiting job before fetching more",
+                "JOB_BATCH_ACTIVE",
+                "Resolve every active job in the current batch before fetching more",
+                details={"active_jobs": active_count},
             )
 
         now = datetime.now(UTC)

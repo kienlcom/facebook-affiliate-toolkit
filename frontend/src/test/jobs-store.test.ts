@@ -62,6 +62,7 @@ describe('jobs store', () => {
     expect(apiMock.fetchJobs).toHaveBeenCalledWith('session-id')
     expect(count).toBe(1)
     expect(store.jobs[0].id).toBe('fetched-job')
+    expect(store.hasActiveJobs).toBe(true)
   })
 
   it('confirms before claim', async () => {

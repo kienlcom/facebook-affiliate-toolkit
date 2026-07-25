@@ -96,8 +96,8 @@ async function fetchJobs(): Promise<void> {
 function openWindow(markOpened: boolean): void {
   const job = jobsStore.current
   if (!job) return
-  const openedWindow = window.open(job.url, '_blank', 'noopener,noreferrer')
-  if (openedWindow && markOpened) {
+  window.open(job.url, '_blank', 'noopener,noreferrer')
+  if (markOpened) {
     void jobsStore.markOpened(job.id).then(refresh).catch(() => undefined)
   }
 }
@@ -183,7 +183,8 @@ function handleEvent(event: SessionEvent): void {
         <button
           class="button button-secondary"
           type="button"
-          :disabled="!sessionRunning || jobsStore.busy || pageLoading"
+          :disabled="!sessionRunning || jobsStore.busy || jobsStore.hasActiveJobs || pageLoading"
+          :title="jobsStore.hasActiveJobs ? 'Xử lý hết batch hiện tại trước khi lấy thêm' : 'Lấy batch nhiệm vụ mới'"
           @click="fetchJobs"
         >
           <Download :size="17" /> Lấy nhiệm vụ

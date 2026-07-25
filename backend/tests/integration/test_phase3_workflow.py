@@ -96,9 +96,9 @@ def test_rest_fetch_dedup_state_actions_warning_and_websocket() -> None:
                 assert "access_token" not in json.dumps(event)
 
                 duplicate_fetch = client.post(f"/api/sessions/{session_id}/fetch")
-                assert duplicate_fetch.status_code == 200
-                assert duplicate_fetch.json()["jobs"] == []
-                assert duplicate_fetch.json()["duplicates_ignored"] == 2
+                assert duplicate_fetch.status_code == 409
+                assert duplicate_fetch.json()["error"]["code"] == "JOB_BATCH_ACTIVE"
+                assert duplicate_fetch.json()["error"]["details"]["active_jobs"] == 2
 
                 job_id = fetched.json()["jobs"][0]["id"]
                 opened = client.post(f"/api/jobs/{job_id}/opened")
@@ -153,6 +153,62 @@ def test_rest_fetch_dedup_state_actions_warning_and_websocket() -> None:
                 assert blocked_fetch.json()["error"]["code"] == "SESSION_NOT_RUNNING"
 
     assert profile_route.call_count == 1
+    assert jobs_route.call_count == 1
+
+
+def test_fetch_deduplicates_across_completed_sessions() -> None:
+    with respx.mock(assert_all_called=True) as router:
+        jobs_route = router.get(
+            TDS_BASE_URL,
+            params={"fields": "facebook_page", "access_token": "test-token"},
+        ).mock(return_value=httpx.Response(200, json=load_fixture("jobs_success.json")))
+
+        with TestClient(app) as client:
+            first_session = client.post(
+                "/api/sessions",
+                json={"profile_key": "facebook_page"},
+            )
+            assert first_session.status_code == 201
+            first_session_id = first_session.json()["id"]
+
+            duplicate_session = client.post(
+                "/api/sessions",
+                json={"profile_key": "facebook_page"},
+            )
+            assert duplicate_session.status_code == 409
+            assert duplicate_session.json()["error"]["code"] == "SESSION_ALREADY_RUNNING"
+
+            first_fetch = client.post(f"/api/sessions/{first_session_id}/fetch")
+            assert first_fetch.status_code == 200
+            assert len(first_fetch.json()["jobs"]) == 2
+
+            for job in first_fetch.json()["jobs"]:
+                opened = client.post(f"/api/jobs/{job['id']}/opened")
+                assert opened.status_code == 200
+                skipped = client.post(
+                    f"/api/jobs/{job['id']}/skip",
+                    json={"reason": "dedup test"},
+                )
+                assert skipped.status_code == 200
+
+            stopped = client.post(
+                f"/api/sessions/{first_session_id}/stop",
+                json={"reason": "TEST_COMPLETED"},
+            )
+            assert stopped.status_code == 200
+
+            second_session = client.post(
+                "/api/sessions",
+                json={"profile_key": "facebook_page"},
+            )
+            assert second_session.status_code == 201
+            second_fetch = client.post(
+                f"/api/sessions/{second_session.json()['id']}/fetch"
+            )
+            assert second_fetch.status_code == 200
+            assert second_fetch.json()["jobs"] == []
+            assert second_fetch.json()["duplicates_ignored"] == 2
+
     assert jobs_route.call_count == 2
 
 

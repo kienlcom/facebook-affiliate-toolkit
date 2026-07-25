@@ -37,6 +37,16 @@ def map_provider_error(error: TDSProviderError) -> AppError:
             details={"countdown": error.countdown},
         )
     if isinstance(error, TDSClaimRejectedError):
+        if "không cướp job" in str(error).casefold():
+            return AppError(
+                code=error.code,
+                message=(
+                    "TDS no longer recognizes this job as active; "
+                    "load a fresh batch and finish it before fetching another"
+                ),
+                status_code=422,
+                details={"reason": "JOB_NOT_ACTIVE_IN_TDS"},
+            )
         return AppError(
             code=error.code,
             message="TDS rejected the claim",
