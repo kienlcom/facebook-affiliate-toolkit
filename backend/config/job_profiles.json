@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "profile": {
+    "method": "GET",
+    "path": "",
+    "fields": "profile",
+    "data_field": "data",
+    "username_field": "user",
+    "balance_field": "xu",
+    "secondary_balance_field": "xudie",
+    "facebook_id_field": "idfb"
+  },
+  "profiles": [
+    {
+      "key": "facebook_page",
+      "display_name": "Facebook Page Follow",
+      "provider": "tds",
+      "platform": "facebook",
+      "job_method": "GET",
+      "job_path": "",
+      "job_field": "facebook_page",
+      "claim_method": "GET",
+      "claim_path": "coin/",
+      "claim_type": "facebook_page_cache",
+      "id_format": "job.code",
+      "settlement_type": "facebook_page",
+      "settlement_id": "facebook_api",
+      "settlement_threshold": 5,
+      "url_template": "https://www.facebook.com/{external_id}",
+      "response_mapping": {
+        "jobs_field": "data",
+        "cache_field": "cache",
+        "external_id_field": "id",
+        "code_field": "code",
+        "action_field": "type"
+      },
+      "minimum_claim_wait_seconds": 3,
+      "enabled": true,
+      "verified_at": "2026-07-25",
+      "fixture_version": "phase0-2026-07-25"
+    }
+  ]
+}
