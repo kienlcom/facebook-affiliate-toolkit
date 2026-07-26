@@ -11,6 +11,7 @@ from app.core.errors import ConflictError, NotFoundError
 from app.db.models import Account, Job, Session
 from app.jobs.state_machine import ACTIVE_STATES, JobState, StateConflictError, transition
 from app.platforms.facebook.urls import validate_facebook_url
+from app.platforms.facebook.auto_advance import AutoOpenCoordinator
 from app.providers.tds.client import TDSClient
 from app.providers.tds.errors import TDSAuthError, TDSCircuitOpenError, TDSRateLimitError
 from app.providers.tds.models import TDSProviderConfig, TDSRequestContext
@@ -27,12 +28,14 @@ class JobsService:
         session_service: SessionService,
         provider_config: TDSProviderConfig,
         ws_manager: WebSocketManager,
+        auto_open_coordinator: AutoOpenCoordinator | None = None,
     ) -> None:
         self._session_factory = session_factory
         self._tds_client = tds_client
         self._session_service = session_service
         self._provider_config = provider_config
         self._ws_manager = ws_manager
+        self._auto_open_coordinator = auto_open_coordinator
 
     async def fetch(self, session_id: UUID) -> tuple[list[Job], int]:
         async with self._session_factory() as db:
@@ -50,6 +53,11 @@ class JobsService:
             await self._session_service.stop_for_auth_failure(session_id)
             raise
         except (TDSRateLimitError, TDSCircuitOpenError) as error:
+            if self._auto_open_coordinator is not None:
+                await self._auto_open_coordinator.pause_for_safety(
+                    session_id,
+                    error.code,
+                )
             await self._ws_manager.publish(
                 session_id,
                 "api.rate_limited",
@@ -125,6 +133,8 @@ class JobsService:
                 },
             )
         duplicates_ignored = len(provider_result.jobs) - len(created)
+        if self._auto_open_coordinator is not None:
+            await self._auto_open_coordinator.queue_updated(session_id)
         return created, duplicates_ignored
 
     async def get(self, job_id: UUID) -> Job:
@@ -213,6 +223,8 @@ class JobsService:
             await db.commit()
 
         await self._publish_state(job)
+        if self._auto_open_coordinator is not None:
+            await self._auto_open_coordinator.job_resolved(job.session_id)
         return job
 
     async def mark_invalid(self, job_id: UUID) -> Job:
@@ -230,6 +242,8 @@ class JobsService:
             await db.commit()
 
         await self._publish_state(job)
+        if self._auto_open_coordinator is not None:
+            await self._auto_open_coordinator.job_resolved(job.session_id)
         return job
 
     async def _assert_fetch_allowed(self, db: AsyncSession, session: Session) -> None:

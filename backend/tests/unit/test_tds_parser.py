@@ -54,6 +54,23 @@ def test_jobs_parser_handles_jobs_and_empty_as_normal_results() -> None:
     assert empty.jobs == []
 
 
+def test_jobs_parser_classifies_provider_cooldown() -> None:
+    profile = load_provider_config().get_enabled_profile("facebook_page")
+
+    with pytest.raises(TDSTooFastError) as exc_info:
+        parse_jobs(
+            200,
+            {},
+            {
+                "error": "Thao tác quá nhanh vui lòng chậm lại",
+                "countdown": 31,
+            },
+            profile,
+        )
+
+    assert exc_info.value.countdown == 31
+
+
 def test_facebook_follow_profile_uses_live_verified_mapping() -> None:
     profile = load_provider_config().get_enabled_profile("facebook_follow")
     jobs = parse_jobs(200, {}, load_fixture("jobs_follow_success.json"), profile)

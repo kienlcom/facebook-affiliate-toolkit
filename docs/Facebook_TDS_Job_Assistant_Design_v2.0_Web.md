@@ -1,7 +1,7 @@
 # Facebook TDS Job Assistant — Tài liệu thiết kế hệ thống Web
 
-> **Phiên bản:** 2.0 — Web Architecture Alignment  
-> **Ngày cập nhật:** 25/07/2026  
+> **Phiên bản:** 2.1 — Local Link Opener and Auto-Advance  
+> **Ngày cập nhật:** 26/07/2026  
 > **Trạng thái:** Design specification đồng bộ với `IMPLEMENTATION_PLAN.md`  
 > **Kiến trúc:** Vue 3 + TypeScript + FastAPI + PostgreSQL  
 > **Mô hình vận hành:** Bán tự động, local-first, sẵn sàng mở rộng multi-user  
@@ -10,6 +10,16 @@
 ---
 
 ## Lịch sử thay đổi
+
+### Phiên bản 2.1
+
+Bổ sung **Local Link Opener + Auto-Advance** (tùy chọn, chỉ chạy local-first) — xem §32:
+
+- Cho phép backend tự mở link job kế tiếp bằng trình duyệt local, giãn cách `AUTO_OPEN_INTERVAL_SECONDS` (mặc định 20s), thay vì user bấm Open từng job.
+- Mở URL đã validate **không** phải UI automation bị cấm; các invariant an toàn giữ nguyên: **không** auto Like/Follow/Comment, **không** auto-confirm, **không** auto-claim (vẫn bắt buộc xác nhận thủ công trước claim).
+- Auto-advance là tuần tự, tôn trọng "một job WAITING_USER tại một thời điểm" (§21.1): chỉ mở job kế sau khi job hiện tại đã resolved và qua interval.
+- Chỉ hợp lệ ở chế độ local (`LINK_OPENER_MODE=local_browser`); hosted multi-user phải fail-closed về `frontend_manual`.
+- Interval là nhịp thao tác, **không** phải ngưỡng an toàn/tránh phát hiện.
 
 ### Phiên bản 2.0
 
@@ -230,6 +240,8 @@ Chọn profile
 - Cơ chế anti-detection.
 - Claim khi chưa có xác nhận thủ công.
 - Gửi token TDS xuống frontend.
+
+> **Làm rõ (v2.1):** *Mở một URL đã được validate* — dù do người dùng bấm hay do Local Link Opener tự mở (§32) — **không** nằm trong danh mục cấm này. Điều bị cấm là **tự tạo tương tác** (Like/Follow/Reaction/Comment), **tự xác nhận** và **tự claim**. Auto-open chỉ thay thao tác "bấm Open", không thay thao tác Facebook và không thay xác nhận thủ công.
 
 ---
 
@@ -670,6 +682,10 @@ MVP không tự động poll.
 
 ## 9.5. Mở link
 
+Có hai chế độ (`LINK_OPENER_MODE`):
+
+**A. `frontend_manual` (mặc định)** — user bấm Open, frontend mở tab:
+
 ```text
 User nhấn Open link
 → frontend window.open(job.url)
@@ -679,7 +695,17 @@ User nhấn Open link
 → lưu opened_at theo giờ server
 ```
 
-`window.open()` không chứng minh trang Facebook đã tải hoặc hành động đã hoàn tất.
+**B. `local_browser` (tùy chọn, local-first)** — backend tự mở link job kế tiếp (§32):
+
+```text
+Auto-advance chọn job kế
+→ backend validate URL
+→ backend mở trình duyệt local (webbrowser.open, tab mới)
+→ transition OPENING → OPENED → WAITING_USER
+→ lưu opened_at theo giờ server
+```
+
+`window.open()` (hoặc `webbrowser.open`) không chứng minh trang Facebook đã tải hoặc hành động đã hoàn tất. Ở cả hai chế độ, claim vẫn bắt buộc xác nhận thủ công (§9.6, §9.7).
 
 ## 9.6. Xác nhận thủ công
 
@@ -871,6 +897,11 @@ TDS_MAX_RETRIES=3
 FETCH_MODE=manual
 AUTO_POLL_ENABLED=false
 
+# Link opener: frontend_manual (mặc định) hoặc local_browser (auto-advance, chỉ local)
+LINK_OPENER_MODE=frontend_manual
+AUTO_OPEN_ENABLED=false
+AUTO_OPEN_INTERVAL_SECONDS=20
+
 MIN_SECONDS_BEFORE_CONFIRM=2
 MIN_SECONDS_BEFORE_CLAIM=3
 MAX_JOBS_PER_SESSION=20
@@ -906,6 +937,10 @@ Backend không khởi động nếu:
 - Một cờ STOP_ON_* bị tắt.
 - DATABASE_URL không parse được.
 - CORS origins không hợp lệ.
+- `LINK_OPENER_MODE` không thuộc {`frontend_manual`, `local_browser`}.
+- `AUTO_OPEN_ENABLED=true` nhưng `LINK_OPENER_MODE != local_browser`.
+- `LINK_OPENER_MODE=local_browser` khi không ở chế độ local (hosted multi-user phải fail-closed về `frontend_manual`).
+- `AUTO_OPEN_INTERVAL_SECONDS` không phải số nguyên dương.
 
 ## 11.3. Job profile config
 
@@ -1153,8 +1188,8 @@ CANCELLED
 |---|---|---|
 | FETCHED | VALIDATED | ID và URL hợp lệ |
 | FETCHED | LINK_INVALID | URL không hợp lệ |
-| VALIDATED | OPENING | Frontend yêu cầu mở |
-| OPENING | OPENED | Frontend báo đã gọi `window.open` |
+| VALIDATED | OPENING | Frontend yêu cầu mở, hoặc backend auto-advance mở (local_browser, §32) |
+| OPENING | OPENED | Frontend báo đã gọi `window.open`, hoặc backend đã gọi `webbrowser.open` |
 | OPENED | WAITING_USER | Backend ghi `opened_at` |
 | WAITING_USER | USER_CONFIRMED | User xác nhận |
 | WAITING_USER | USER_SKIPPED | User bỏ qua |
@@ -2583,7 +2618,7 @@ Một module chỉ hoàn thành khi:
 | HTTP client | httpx async |
 | Realtime | WebSocket |
 | Fetch | Manual trong MVP |
-| Link opening | Frontend `window.open` |
+| Link opening | Frontend `window.open` (mặc định) hoặc backend local browser auto-advance (local-first, tùy chọn §32) |
 | Claim | Backend-only |
 | Confirmation | Bắt buộc thủ công |
 | Token | Server-only qua TokenStore |
@@ -2595,9 +2630,105 @@ Một module chỉ hoàn thành khi:
 
 ---
 
+# 32. Local Link Opener và Auto-Advance (tùy chọn, local-first)
+
+## 32.1. Mục tiêu
+
+Giảm thao tác lặp: thay vì user bấm "Open" cho từng job, backend tự mở link job kế tiếp bằng trình duyệt local, giãn cách một khoảng cố định. Đây là tính năng **tùy chọn**, mặc định **tắt**.
+
+## 32.2. Ranh giới an toàn (bất biến giữ nguyên)
+
+- Auto-open chỉ thay thao tác "bấm Open", tức mở một URL đã validate. Nó **không** tự thao tác Facebook, **không** tự xác nhận, **không** tự claim.
+- Claim vẫn đi qua `can_claim()` (§14.9) và bắt buộc `USER_CONFIRMED`. Auto-open **không** rút ngắn min-wait hay bỏ qua manual confirmation.
+- Interval (mặc định 20s) là **nhịp thao tác cho tiện**, không phải ngưỡng an toàn và không nhằm tránh Facebook phát hiện/ban.
+- Không dùng chung với bất kỳ cơ chế nào ở §3.3 (không proxy/account rotation, không anti-detection).
+
+## 32.3. Điều kiện kích hoạt (fail-closed)
+
+- `LINK_OPENER_MODE=local_browser` **và** `AUTO_OPEN_ENABLED=true`.
+- Chỉ hợp lệ khi backend chạy **local trên máy người dùng**. Ở hosted multi-user, backend không được mở trình duyệt trên server → validation ép về `frontend_manual` (§11.2).
+- URL vẫn qua validator Facebook (§4.5): chỉ `https` + host hợp lệ; `webbrowser.open` không dùng shell.
+
+## 32.4. Mô hình auto-advance (tuần tự, một job tại một thời điểm)
+
+Tôn trọng §21.1 ("chỉ một job WAITING_USER mỗi session"):
+
+```text
+1. Session bật auto-open (mode = local_browser).
+2. Backend chọn job kế trong queue đã fetch.
+3. Validate URL → OPENING → webbrowser.open(url) → OPENED → WAITING_USER, ghi opened_at.
+4. User thao tác Facebook + xác nhận / bỏ qua / báo lỗi. Claim vẫn thủ công (§9.7).
+5. Khi job hiện tại resolved (CLAIMED / USER_SKIPPED / LINK_INVALID / CLAIM_REJECTED):
+   → chờ AUTO_OPEN_INTERVAL_SECONDS
+   → nếu còn job trong queue và session còn RUNNING: mở job kế (quay lại bước 3).
+```
+
+Ràng buộc:
+
+- **Không** mở job kế khi còn một job đang `WAITING_USER`/`CLAIMING`. Interval là khoảng nghỉ **giữa** các job đã xong, không phải timer mở nhiều tab song song.
+- Interval countdown phải **hủy được ngay** khi user pause/stop.
+
+## 32.5. Điều kiện dừng auto-advance
+
+Dừng (chuyển về chờ thao tác thủ công hoặc dừng session) khi:
+
+- Hết job trong queue (chờ user fetch thủ công — MVP không auto-poll).
+- Đạt `MAX_JOBS_PER_SESSION` hoặc `MAX_SESSION_DURATION_MINUTES`.
+- User báo account-warning (§15.13) → protection stop.
+- Circuit breaker mở (HTTP 429, §20.4) hoặc token invalid.
+- User pause hoặc tắt auto-open.
+
+## 32.6. REST bổ sung
+
+```http
+POST /api/sessions/{session_id}/auto-open
+```
+
+```json
+{ "enabled": true }
+```
+
+Bật/tắt auto-advance cho session. Backend từ chối nếu `LINK_OPENER_MODE != local_browser` hoặc không ở chế độ local.
+
+```http
+POST /api/sessions/{session_id}/auto-open/pause
+POST /api/sessions/{session_id}/auto-open/resume
+```
+
+Tạm dừng/tiếp tục auto-advance mà **không** kết thúc session.
+
+Ở chế độ `frontend_manual`, các endpoint này không áp dụng; frontend vẫn dùng `POST /api/jobs/{id}/opened` sau `window.open`.
+
+## 32.7. WebSocket bổ sung (§16.3)
+
+```text
+job.auto_opened
+session.auto_open_enabled
+session.auto_open_paused
+session.auto_open_resumed
+auto_open.next_in        # payload: seconds_remaining
+```
+
+## 32.8. Frontend (§17)
+
+- Toggle "Tự động mở link" (chỉ hiện khi mode = local_browser & local).
+- Hiển thị trạng thái auto-open (on/off/paused) và countdown "job kế mở sau N giây".
+- Nút Pause / Resume / Tắt auto-open, và luôn cho phép dừng session.
+- Ở chế độ local_browser, frontend **không** gọi `window.open` (backend đã mở); JobPanel chỉ phản ánh state qua WebSocket.
+
+## 32.9. Kiểm thử bổ sung
+
+- Auto-advance chỉ mở job kế sau khi job hiện tại resolved (không mở song song).
+- Interval countdown hủy được khi pause/stop.
+- account-warning / 429 / đạt limit → dừng auto-advance, không mở thêm.
+- Validation fail-fast khi `AUTO_OPEN_ENABLED=true` mà mode sai hoặc không ở local.
+- Auto-open không tạo claim tự động (claim vẫn cần confirm).
+
+---
+
 # Kết luận
 
-Phiên bản 2.0 chuyển tài liệu từ một CLI assistant dùng SQLite thành một web app có kiến trúc rõ ràng:
+Phiên bản 2.1 giữ kiến trúc web của 2.0 và bổ sung Local Link Opener/auto-advance tuần tự:
 
 ```text
 Vue 3

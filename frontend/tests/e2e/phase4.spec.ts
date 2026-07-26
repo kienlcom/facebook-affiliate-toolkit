@@ -23,6 +23,18 @@ const profile = {
   settlement_threshold: 5
 }
 
+const manualAutoOpen = {
+  available: false,
+  mode: 'frontend_manual',
+  enabled: false,
+  paused: false,
+  state: 'OFF',
+  interval_seconds: 20,
+  next_open_at: null,
+  seconds_remaining: null,
+  reason: null
+}
+
 const summary = {
   session: {
     id: sessionId,
@@ -47,6 +59,7 @@ const summary = {
   },
   elapsed_seconds: 78,
   remaining_jobs: 15,
+  auto_open: manualAutoOpen,
   jobs: [
     {
       id: jobId,
@@ -103,6 +116,85 @@ test('dashboard renders the local account on desktop', async ({ page }) => {
 
   await page.screenshot({
     path: 'test-results/phase4-dashboard-desktop.png',
+    fullPage: true
+  })
+})
+
+test('a new session fetches its initial batch once', async ({ page }) => {
+  const emptySummary = {
+    ...summary,
+    counters: {
+      fetched: 0,
+      opened: 0,
+      confirmed: 0,
+      claimed: 0,
+      failed: 0,
+      points_earned: 0
+    },
+    jobs: []
+  }
+  let fetchCalls = 0
+  await mockApi(page, emptySummary)
+  await page.route('**/api/sessions', (route) => fulfillJson(route, summary.session))
+  await page.route(`**/api/sessions/${sessionId}/fetch`, async (route) => {
+    fetchCalls += 1
+    await fulfillJson(route, { jobs: summary.jobs, duplicates_ignored: 0 })
+  })
+  await page.goto('/')
+
+  await page.locator('.start-button').click()
+  await expect(page).toHaveURL(`/sessions/${sessionId}`)
+  await expect.poll(() => fetchCalls).toBe(1)
+
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Facebook Page', exact: true })).toBeVisible()
+  await expect.poll(() => fetchCalls).toBe(1)
+})
+
+test('local browser mode shows backend controls and no frontend open button', async ({ page }) => {
+  const localSummary = {
+    ...summary,
+    auto_open: {
+      available: true,
+      mode: 'local_browser',
+      enabled: true,
+      paused: false,
+      state: 'COUNTDOWN',
+      interval_seconds: 20,
+      next_open_at: new Date(Date.now() + 20_000).toISOString(),
+      seconds_remaining: 20,
+      reason: null
+    },
+    jobs: [
+      {
+        ...summary.jobs[0],
+        state: 'VALIDATED',
+        opened_at: null
+      }
+    ]
+  }
+  await page.setViewportSize({ width: 390, height: 844 })
+  await mockApi(page, localSummary)
+  await page.route(`**/api/sessions/${sessionId}/auto-open/pause`, (route) =>
+    fulfillJson(route, {
+      ...localSummary.auto_open,
+      paused: true,
+      state: 'PAUSED',
+      next_open_at: null,
+      seconds_remaining: null,
+      reason: 'USER_PAUSED'
+    })
+  )
+  await page.goto(`/sessions/${sessionId}`)
+
+  await expect(page.getByText('Tự động mở link')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Mở Facebook' })).toHaveCount(0)
+  await page.getByTitle('Tạm dừng tự động mở link').click()
+  await expect(page.getByText('Tạm dừng')).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+
+  await page.screenshot({
+    path: 'test-results/phase4-auto-open-mobile.png',
     fullPage: true
   })
 })

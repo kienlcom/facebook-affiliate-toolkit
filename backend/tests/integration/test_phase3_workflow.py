@@ -126,6 +126,17 @@ def test_rest_fetch_dedup_state_actions_warning_and_websocket() -> None:
 
                 summary = client.get(f"/api/sessions/{session_id}/summary")
                 assert summary.status_code == 200
+                assert summary.json()["auto_open"] == {
+                    "available": False,
+                    "mode": "frontend_manual",
+                    "enabled": False,
+                    "paused": False,
+                    "state": "OFF",
+                    "interval_seconds": 20,
+                    "next_open_at": None,
+                    "seconds_remaining": None,
+                    "reason": None,
+                }
                 assert summary.json()["counters"] == {
                     "fetched": 2,
                     "opened": 1,
@@ -135,6 +146,16 @@ def test_rest_fetch_dedup_state_actions_warning_and_websocket() -> None:
                     "points_earned": 0,
                 }
                 assert summary.json()["remaining_jobs"] == 18
+
+                unavailable_auto_open = client.post(
+                    f"/api/sessions/{session_id}/auto-open",
+                    json={"enabled": True},
+                )
+                assert unavailable_auto_open.status_code == 409
+                assert (
+                    unavailable_auto_open.json()["error"]["code"]
+                    == "AUTO_OPEN_NOT_AVAILABLE"
+                )
 
                 confirmed_again = client.post(f"/api/jobs/{job_id}/confirm")
                 assert confirmed_again.status_code == 409

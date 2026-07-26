@@ -134,3 +134,15 @@ Status: `PILOT_PENDING_LIVE_CLAIM`.
 - No claim has been sent by Codex. The first batch still requires manual
   Facebook actions and manual confirmation before the mode can be promoted
   from `PILOT` to `GO`.
+
+### Live claim evidence — 2026-07-26
+
+- Three manually confirmed `facebook_follow` jobs were submitted with the
+  documented review contract:
+  `type=facebook_follow_cache&id={job.code}`.
+- TDS returned HTTP 200 with the sanitized body
+  `{"error":"Job không hợp lệ","cache":0}` for all three jobs.
+- The request mapping matched each fetched job's `code`; no token or transport
+  error was involved.
+- Keep this profile at `PILOT`. A successful review-cache response and a
+  successful settlement response are still required before promotion to `GO`.

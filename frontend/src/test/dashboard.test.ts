@@ -2,6 +2,7 @@ import { createPinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { useSessionStore } from '../stores/session'
 import DashboardView from '../views/DashboardView.vue'
 
 const push = vi.fn()
@@ -94,8 +95,9 @@ describe('DashboardView', () => {
   })
 
   it('loads dashboard data and starts a session', async () => {
+    const pinia = createPinia()
     const wrapper = mount(DashboardView, {
-      global: { plugins: [createPinia()] }
+      global: { plugins: [pinia] }
     })
     await flushPromises()
 
@@ -111,6 +113,7 @@ describe('DashboardView', () => {
       name: 'session',
       params: { id: 'session-id' }
     })
+    expect(useSessionStore(pinia).pendingInitialFetchSessionId).toBe('session-id')
   })
 
   it('starts the selected Facebook Follow pilot profile', async () => {

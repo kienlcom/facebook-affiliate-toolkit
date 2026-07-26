@@ -42,12 +42,29 @@ class SessionCounters(BaseModel):
     points_earned: int
 
 
+class AutoOpenRequest(BaseModel):
+    enabled: bool
+
+
+class AutoOpenStatusResponse(BaseModel):
+    available: bool
+    mode: Literal["frontend_manual", "local_browser"]
+    enabled: bool
+    paused: bool
+    state: str
+    interval_seconds: int
+    next_open_at: datetime | None
+    seconds_remaining: int | None
+    reason: str | None
+
+
 class SessionSummaryResponse(BaseModel):
     session: SessionResponse
     counters: SessionCounters
     elapsed_seconds: int
     remaining_jobs: int
     jobs: list[JobResponse]
+    auto_open: AutoOpenStatusResponse
 
 
 WarningType = Literal[

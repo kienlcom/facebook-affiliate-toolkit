@@ -37,6 +37,21 @@ def map_provider_error(error: TDSProviderError) -> AppError:
             details={"countdown": error.countdown},
         )
     if isinstance(error, TDSClaimRejectedError):
+        if "job không hợp lệ" in str(error).casefold():
+            return AppError(
+                code=error.code,
+                message=(
+                    "TDS báo job không hợp lệ nên không cộng xu. "
+                    "Hãy bỏ qua job này và lấy batch mới; nếu lỗi lặp lại, "
+                    "dừng phiên và không tiếp tục claim."
+                ),
+                status_code=422,
+                details={
+                    "reason": "INVALID_JOB",
+                    "provider_message": "Job không hợp lệ",
+                    "action": "SKIP_AND_FETCH_FRESH_BATCH",
+                },
+            )
         if "không cướp job" in str(error).casefold():
             return AppError(
                 code=error.code,
@@ -51,6 +66,7 @@ def map_provider_error(error: TDSProviderError) -> AppError:
             code=error.code,
             message="TDS rejected the claim",
             status_code=422,
+            details={"reason": "PROVIDER_REJECTED"},
         )
     if isinstance(error, TDSRateLimitError):
         return AppError(

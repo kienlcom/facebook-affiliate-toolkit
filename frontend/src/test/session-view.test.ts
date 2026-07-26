@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAccountStore } from '../stores/account'
 import { useJobsStore } from '../stores/jobs'
+import { useSessionStore } from '../stores/session'
 import SessionView from '../views/SessionView.vue'
 
 const push = vi.fn()
@@ -13,7 +14,10 @@ const apiMock = vi.hoisted(() => ({
   markOpened: vi.fn(),
   accountWarning: vi.fn(),
   fetchJobs: vi.fn(),
-  stopSession: vi.fn()
+  stopSession: vi.fn(),
+  setAutoOpen: vi.fn(),
+  pauseAutoOpen: vi.fn(),
+  resumeAutoOpen: vi.fn()
 }))
 
 vi.mock('vue-router', () => ({
@@ -44,6 +48,7 @@ describe('SessionView', () => {
     elapsed_seconds: number
     remaining_jobs: number
     jobs: Array<Record<string, unknown>>
+    auto_open?: Record<string, unknown>
   }
 
   beforeEach(() => {
@@ -118,6 +123,39 @@ describe('SessionView', () => {
       summary.session.status = 'STOPPED'
       summary.session.stop_reason = 'USER_REQUESTED'
       return structuredClone(summary.session)
+    })
+    apiMock.setAutoOpen.mockResolvedValue({
+      available: true,
+      mode: 'local_browser',
+      enabled: false,
+      paused: false,
+      state: 'OFF',
+      interval_seconds: 20,
+      next_open_at: null,
+      seconds_remaining: null,
+      reason: null
+    })
+    apiMock.pauseAutoOpen.mockResolvedValue({
+      available: true,
+      mode: 'local_browser',
+      enabled: true,
+      paused: true,
+      state: 'PAUSED',
+      interval_seconds: 20,
+      next_open_at: null,
+      seconds_remaining: null,
+      reason: 'USER_PAUSED'
+    })
+    apiMock.resumeAutoOpen.mockResolvedValue({
+      available: true,
+      mode: 'local_browser',
+      enabled: true,
+      paused: false,
+      state: 'IDLE',
+      interval_seconds: 20,
+      next_open_at: null,
+      seconds_remaining: null,
+      reason: null
     })
   })
 
@@ -201,7 +239,7 @@ describe('SessionView', () => {
     })
     await flushPromises()
 
-    useJobsStore().claimResult = {
+    useJobsStore(pinia).claimResult = {
       job_id: 'job-id',
       status: 'CLAIMED',
       points_added: 6300,
@@ -215,6 +253,83 @@ describe('SessionView', () => {
     const notice = wrapper.get('[data-testid="claim-notice"]')
     expect(notice.text()).toContain('Đã claim thành công 6.300 xu.')
     expect(notice.text()).toContain('Số dư TDS: 81.300 xu')
+  })
+
+  it('uses backend auto-open controls without calling window.open in local mode', async () => {
+    const openSpy = vi.spyOn(window, 'open')
+    summary.auto_open = {
+      available: true,
+      mode: 'local_browser',
+      enabled: true,
+      paused: false,
+      state: 'IDLE',
+      interval_seconds: 20,
+      next_open_at: null,
+      seconds_remaining: null,
+      reason: null
+    }
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAccountStore().profiles = [
+      {
+        key: 'facebook_page',
+        display_name: 'Facebook Page Follow',
+        provider: 'tds',
+        platform: 'facebook',
+        minimum_claim_wait_seconds: 3,
+        settlement_threshold: 5
+      }
+    ]
+    const wrapper = mount(SessionView, {
+      props: { id: 'session-id' },
+      global: { plugins: [pinia] }
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Tự động mở link')
+    expect(wrapper.text()).not.toContain('Mở Facebook')
+    await wrapper.get('button[title="Tạm dừng tự động mở link"]').trigger('click')
+    await flushPromises()
+
+    expect(apiMock.pauseAutoOpen).toHaveBeenCalledWith('session-id')
+    expect(openSpy).not.toHaveBeenCalled()
+  })
+
+  it('fetches one initial batch for a newly created session only', async () => {
+    summary.jobs = []
+    summary.counters.fetched = 0
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAccountStore().profiles = [
+      {
+        key: 'facebook_page',
+        display_name: 'Facebook Page Follow',
+        provider: 'tds',
+        platform: 'facebook',
+        minimum_claim_wait_seconds: 3,
+        settlement_threshold: 5
+      }
+    ]
+    useSessionStore().pendingInitialFetchSessionId = 'session-id'
+
+    const firstMount = mount(SessionView, {
+      props: { id: 'session-id' },
+      global: { plugins: [pinia] }
+    })
+    await flushPromises()
+
+    expect(apiMock.fetchJobs).toHaveBeenCalledTimes(1)
+    expect(useSessionStore().pendingInitialFetchSessionId).toBeNull()
+    firstMount.unmount()
+
+    const resumedMount = mount(SessionView, {
+      props: { id: 'session-id' },
+      global: { plugins: [pinia] }
+    })
+    await flushPromises()
+
+    expect(apiMock.fetchJobs).toHaveBeenCalledTimes(1)
+    resumedMount.unmount()
   })
 
   it('shows no-jobs dialog and locks fetch when the user continues', async () => {

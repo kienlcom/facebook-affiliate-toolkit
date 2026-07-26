@@ -30,6 +30,9 @@ class Settings(BaseSettings):
 
     FETCH_MODE: Literal["manual"] = "manual"
     AUTO_POLL_ENABLED: bool = False
+    LINK_OPENER_MODE: Literal["frontend_manual", "local_browser"] = "frontend_manual"
+    AUTO_OPEN_ENABLED: bool = False
+    AUTO_OPEN_INTERVAL_SECONDS: int = 20
 
     MIN_SECONDS_BEFORE_CONFIRM: int = 2
     MIN_SECONDS_BEFORE_CLAIM: int = 3
@@ -84,6 +87,19 @@ class Settings(BaseSettings):
             raise ValueError("TDS_MAX_RETRIES must be between 0 and 5")
         if self.AUTO_POLL_ENABLED:
             raise ValueError("AUTO_POLL_ENABLED must be false in MVP")
+        if self.AUTO_OPEN_ENABLED and self.LINK_OPENER_MODE != "local_browser":
+            raise ValueError(
+                "AUTO_OPEN_ENABLED requires LINK_OPENER_MODE=local_browser"
+            )
+        if (
+            self.LINK_OPENER_MODE == "local_browser"
+            and self.APP_ENV.casefold() not in {"development", "local", "test"}
+        ):
+            raise ValueError(
+                "LINK_OPENER_MODE=local_browser is only valid for a local backend"
+            )
+        if self.AUTO_OPEN_INTERVAL_SECONDS <= 0:
+            raise ValueError("AUTO_OPEN_INTERVAL_SECONDS must be > 0")
         if self.MAX_JOBS_PER_SESSION <= 0:
             raise ValueError("MAX_JOBS_PER_SESSION must be > 0")
         if self.MAX_SESSION_DURATION_MINUTES <= 0:

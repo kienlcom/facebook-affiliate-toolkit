@@ -479,6 +479,105 @@ button:focus-visible {
   font-size: 19px;
 }
 
+.auto-open-bar {
+  min-height: 56px;
+  display: grid;
+  grid-template-columns: minmax(190px, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 16px;
+  padding: 9px 12px;
+  border-top: 1px solid #b9cbd3;
+  border-bottom: 1px solid #b9cbd3;
+  background: #edf4f7;
+}
+
+.auto-open-toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+}
+
+.auto-open-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.toggle-track {
+  width: 36px;
+  height: 20px;
+  flex: 0 0 auto;
+  padding: 2px;
+  border: 1px solid #98aab4;
+  border-radius: 999px;
+  background: #c6d0d5;
+  transition: background 120ms ease;
+}
+
+.toggle-track span {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(24, 35, 44, 0.25);
+  transition: transform 120ms ease;
+}
+
+.auto-open-toggle input:checked + .toggle-track {
+  border-color: var(--green);
+  background: var(--green);
+}
+
+.auto-open-toggle input:checked + .toggle-track span {
+  transform: translateX(16px);
+}
+
+.auto-open-toggle input:focus-visible + .toggle-track {
+  outline: 3px solid rgba(36, 104, 167, 0.2);
+  outline-offset: 2px;
+}
+
+.auto-open-toggle strong,
+.auto-open-toggle small {
+  display: block;
+}
+
+.auto-open-toggle strong {
+  font-size: 12px;
+}
+
+.auto-open-toggle small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.auto-open-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  color: #3f5664;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.auto-open-state span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auto-open-actions {
+  display: flex;
+  gap: 7px;
+}
+
 .stats-band {
   display: grid;
   grid-template-columns: repeat(9, minmax(74px, 1fr));
@@ -842,6 +941,17 @@ button:focus-visible {
 
   .toolbar-actions {
     width: 100%;
+  }
+
+  .auto-open-bar {
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+  }
+
+  .auto-open-state {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: flex-start;
   }
 
   .toolbar-actions .button {

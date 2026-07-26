@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 
 import { SessionSocket } from '../api/ws'
 import type { SessionEvent, WarningType } from '../api/types'
+import AutoOpenControls from '../components/AutoOpenControls.vue'
 import JobPanel from '../components/JobPanel.vue'
 import LogPanel from '../components/LogPanel.vue'
 import NoJobsDialog from '../components/NoJobsDialog.vue'
@@ -36,6 +37,21 @@ const profile = computed(() =>
   accountStore.profiles.find((item) => item.key === sessionStore.current?.profile_key)
 )
 const sessionRunning = computed(() => sessionStore.current?.status === 'RUNNING')
+const autoOpenStatus = computed(() => sessionStore.summary?.auto_open ?? null)
+const localBrowserMode = computed(
+  () => autoOpenStatus.value?.mode === 'local_browser'
+)
+const autoOpenCountdown = computed(() => {
+  const status = autoOpenStatus.value
+  if (!status) return 0
+  if (status.next_open_at) {
+    return Math.max(
+      0,
+      Math.ceil((new Date(status.next_open_at).getTime() - now.value) / 1000)
+    )
+  }
+  return status.seconds_remaining ?? 0
+})
 const fetchLocked = computed(() => sessionStore.isFetchLocked(props.id, now.value))
 const fetchLockRemaining = computed(() => {
   const expiresAt = sessionStore.fetchLockUntil(props.id)
@@ -77,6 +93,10 @@ onMounted(async () => {
       await accountStore.loadDashboard()
     }
     await refresh()
+    const shouldFetchInitialBatch = sessionStore.consumeInitialFetch(props.id)
+    if (shouldFetchInitialBatch && sessionRunning.value && !jobsStore.hasActiveJobs) {
+      await fetchJobs()
+    }
     socket = new SessionSocket(
       props.id,
       handleEvent,
@@ -121,6 +141,7 @@ async function fetchJobs(): Promise<void> {
 }
 
 function openWindow(markOpened: boolean): void {
+  if (localBrowserMode.value) return
   const job = jobsStore.current
   if (!job) return
   window.open(job.url, '_blank', 'noopener,noreferrer')
@@ -184,6 +205,30 @@ function continueAfterNoJobs(): void {
   noJobsOpen.value = false
 }
 
+async function setAutoOpen(enabled: boolean): Promise<void> {
+  try {
+    await sessionStore.setAutoOpen(props.id, enabled)
+  } catch {
+    return
+  }
+}
+
+async function pauseAutoOpen(): Promise<void> {
+  try {
+    await sessionStore.pauseAutoOpen(props.id)
+  } catch {
+    return
+  }
+}
+
+async function resumeAutoOpen(): Promise<void> {
+  try {
+    await sessionStore.resumeAutoOpen(props.id)
+  } catch {
+    return
+  }
+}
+
 async function submitWarning(type: WarningType, note: string | null): Promise<void> {
   try {
     await sessionStore.reportWarning(props.id, type, note)
@@ -196,6 +241,7 @@ async function submitWarning(type: WarningType, note: string | null): Promise<vo
 
 function handleEvent(event: SessionEvent): void {
   logsStore.add(event)
+  sessionStore.applyAutoOpenEvent(event)
   if (
     event.event.startsWith('job.') ||
     event.event.startsWith('session.') ||
@@ -280,6 +326,17 @@ function handleEvent(event: SessionEvent): void {
       <LoaderCircle class="spinning" :size="28" />
     </div>
     <template v-else>
+      <AutoOpenControls
+        v-if="autoOpenStatus"
+        :status="autoOpenStatus"
+        :countdown="autoOpenCountdown"
+        :busy="sessionStore.loading"
+        :session-running="sessionRunning"
+        @toggle="setAutoOpen"
+        @pause="pauseAutoOpen"
+        @resume="resumeAutoOpen"
+      />
+
       <SessionStats
         :counters="sessionStore.summary.counters"
         :elapsed-seconds="elapsedSeconds"
@@ -314,6 +371,7 @@ function handleEvent(event: SessionEvent): void {
           :countdown="countdown"
           :busy="jobsStore.busy"
           :session-running="sessionRunning"
+          :manual-link-opening="!localBrowserMode"
           @open="openWindow(true)"
           @reopen="openWindow(false)"
           @complete="complete"

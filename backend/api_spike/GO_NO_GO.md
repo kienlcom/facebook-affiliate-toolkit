@@ -39,9 +39,15 @@ No unknown issue blocks the verified MVP profile.
 
 ## Additional profile: facebook_follow
 
-Current decision: `PILOT_PENDING_LIVE_CLAIM`.
+Current decision: `PILOT_CLAIM_REJECTED`.
 
 The official Postman mapping and a sanitized live get-jobs response are
 verified. Eight jobs were available on 2026-07-26. The profile may be used only
 for the manual pilot flow; promote it to `GO` only after review-cache and
 settlement responses succeed for a manually completed batch.
+
+Three manual claim-review attempts on 2026-07-26 used the documented
+`facebook_follow_cache` plus `job.code` contract, but TDS returned the sanitized
+business error `Job không hợp lệ` for every attempt. This is not an auth,
+transport, or parser failure. Do not promote the profile to `GO` until a fresh
+manual batch produces both cache acceptance and settlement success.

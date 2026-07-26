@@ -4,12 +4,19 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends
 
-from app.api.dependencies import get_jobs_service, get_session_service
+from app.api.dependencies import (
+    get_auto_open_coordinator,
+    get_jobs_service,
+    get_session_service,
+)
 from app.api.serializers import job_response, session_response, session_summary_response
 from app.jobs.service import JobsService
+from app.platforms.facebook.auto_advance import AutoOpenCoordinator
 from app.schemas.job import FetchJobsResponse
 from app.schemas.session import (
     AccountWarningRequest,
+    AutoOpenRequest,
+    AutoOpenStatusResponse,
     CreateSessionRequest,
     SessionResponse,
     SessionSummaryResponse,
@@ -52,9 +59,10 @@ async def stop_session(
 async def session_summary(
     session_id: UUID,
     service: SessionService = Depends(get_session_service),
+    auto_open: AutoOpenCoordinator = Depends(get_auto_open_coordinator),
 ) -> SessionSummaryResponse:
     session, jobs = await service.summary(session_id)
-    return session_summary_response(session, jobs)
+    return session_summary_response(session, jobs, auto_open.status(session_id))
 
 
 @router.post("/{session_id}/fetch", response_model=FetchJobsResponse)
@@ -66,6 +74,46 @@ async def fetch_jobs(
     return FetchJobsResponse(
         jobs=[job_response(job) for job in jobs],
         duplicates_ignored=duplicates_ignored,
+    )
+
+
+@router.post("/{session_id}/auto-open", response_model=AutoOpenStatusResponse)
+async def set_auto_open(
+    session_id: UUID,
+    payload: AutoOpenRequest,
+    coordinator: AutoOpenCoordinator = Depends(get_auto_open_coordinator),
+) -> AutoOpenStatusResponse:
+    return AutoOpenStatusResponse.model_validate(
+        await coordinator.set_enabled(session_id, payload.enabled),
+        from_attributes=True,
+    )
+
+
+@router.post(
+    "/{session_id}/auto-open/pause",
+    response_model=AutoOpenStatusResponse,
+)
+async def pause_auto_open(
+    session_id: UUID,
+    coordinator: AutoOpenCoordinator = Depends(get_auto_open_coordinator),
+) -> AutoOpenStatusResponse:
+    return AutoOpenStatusResponse.model_validate(
+        await coordinator.pause(session_id),
+        from_attributes=True,
+    )
+
+
+@router.post(
+    "/{session_id}/auto-open/resume",
+    response_model=AutoOpenStatusResponse,
+)
+async def resume_auto_open(
+    session_id: UUID,
+    coordinator: AutoOpenCoordinator = Depends(get_auto_open_coordinator),
+) -> AutoOpenStatusResponse:
+    return AutoOpenStatusResponse.model_validate(
+        await coordinator.resume(session_id),
+        from_attributes=True,
     )
 
 

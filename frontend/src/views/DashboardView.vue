@@ -153,7 +153,7 @@ async function stopActiveSession(): Promise<void> {
             :disabled="!apiReady || !selectedProfile || sessionStore.loading"
             @click="startSession"
           >
-            <Play :size="17" fill="currentColor" /> Bắt đầu phiên
+            <Play :size="17" fill="currentColor" /> Bắt đầu và lấy nhiệm vụ
             <ArrowRight :size="17" />
           </button>
         </template>

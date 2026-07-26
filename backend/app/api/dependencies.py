@@ -4,6 +4,7 @@ from fastapi import Request
 
 from app.claims.service import ClaimService
 from app.jobs.service import JobsService
+from app.platforms.facebook.auto_advance import AutoOpenCoordinator
 from app.providers.tds.client import TDSClient
 from app.providers.tds.models import TDSProviderConfig
 from app.sessions.service import SessionService
@@ -16,6 +17,10 @@ def get_session_service(request: Request) -> SessionService:
 
 def get_jobs_service(request: Request) -> JobsService:
     return request.app.state.jobs_service
+
+
+def get_auto_open_coordinator(request: Request) -> AutoOpenCoordinator:
+    return request.app.state.auto_open_coordinator
 
 
 def get_claim_service(request: Request) -> ClaimService:

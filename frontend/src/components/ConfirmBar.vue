@@ -6,6 +6,7 @@ const props = defineProps<{
   countdown: number
   busy: boolean
   sessionRunning: boolean
+  manualLinkOpening: boolean
 }>()
 
 defineEmits<{
@@ -24,7 +25,7 @@ function completeLabel(): string {
 <template>
   <div class="confirm-bar">
     <button
-      v-if="state === 'VALIDATED'"
+      v-if="state === 'VALIDATED' && manualLinkOpening"
       class="button button-primary"
       type="button"
       :disabled="busy || !sessionRunning"
@@ -32,8 +33,20 @@ function completeLabel(): string {
     >
       <ExternalLink :size="17" /> Mở Facebook
     </button>
+    <span
+      v-else-if="state === 'VALIDATED'"
+      class="state-note"
+    >
+      Chờ backend mở link
+    </span>
     <template v-else-if="state === 'WAITING_USER'">
-      <button class="button button-secondary" type="button" :disabled="busy" @click="$emit('reopen')">
+      <button
+        v-if="manualLinkOpening"
+        class="button button-secondary"
+        type="button"
+        :disabled="busy"
+        @click="$emit('reopen')"
+      >
         <RotateCcw :size="17" /> Mở lại
       </button>
       <button

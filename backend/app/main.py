@@ -26,6 +26,8 @@ from app.core.redaction import redact
 from app.core.security.token_store import LocalEnvTokenStore
 from app.db.session import build_sessionmaker
 from app.jobs.service import JobsService
+from app.platforms.facebook.auto_advance import AutoOpenCoordinator
+from app.platforms.facebook.opener import LocalBrowserLinkOpener
 from app.providers.tds.client import TDSClient
 from app.providers.tds.error_mapping import map_provider_error
 from app.providers.tds.errors import TDSProviderError
@@ -65,6 +67,12 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncIterator[None]:
     engine = session_factory.kw["bind"]
     provider_config = load_provider_config()
     ws_manager = WebSocketManager()
+    auto_open_coordinator = AutoOpenCoordinator(
+        settings=settings,
+        session_factory=session_factory,
+        opener=LocalBrowserLinkOpener(),
+        ws_manager=ws_manager,
+    )
     token_store = LocalEnvTokenStore(settings)
     tds_client = TDSClient(
         settings=settings,
@@ -77,6 +85,7 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncIterator[None]:
         session_factory=session_factory,
         provider_config=provider_config,
         ws_manager=ws_manager,
+        auto_open_coordinator=auto_open_coordinator,
     )
     jobs_service = JobsService(
         session_factory=session_factory,
@@ -84,6 +93,7 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncIterator[None]:
         session_service=session_service,
         provider_config=provider_config,
         ws_manager=ws_manager,
+        auto_open_coordinator=auto_open_coordinator,
     )
     claim_service = ClaimService(
         session_factory=session_factory,
@@ -91,6 +101,7 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncIterator[None]:
         session_service=session_service,
         provider_config=provider_config,
         ws_manager=ws_manager,
+        auto_open_coordinator=auto_open_coordinator,
     )
 
     async with engine.connect() as connection:
@@ -101,6 +112,7 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncIterator[None]:
     fastapi_app.state.session_factory = session_factory
     fastapi_app.state.provider_config = provider_config
     fastapi_app.state.ws_manager = ws_manager
+    fastapi_app.state.auto_open_coordinator = auto_open_coordinator
     fastapi_app.state.tds_client = tds_client
     fastapi_app.state.session_service = session_service
     fastapi_app.state.jobs_service = jobs_service
@@ -108,6 +120,7 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
+        await auto_open_coordinator.shutdown()
         await tds_client.aclose()
         await engine.dispose()
 

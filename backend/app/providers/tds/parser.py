@@ -43,6 +43,18 @@ def _raise_common_error(payload: dict[str, Any]) -> None:
     normalized = message.casefold()
     if "access token" in normalized:
         raise TDSAuthError(message, response_json=payload)
+    if "quá nhanh" in normalized:
+        countdown_value = payload.get("countdown")
+        countdown = (
+            float(countdown_value)
+            if isinstance(countdown_value, (int, float))
+            else None
+        )
+        raise TDSTooFastError(
+            message,
+            countdown=countdown,
+            response_json=payload,
+        )
     if "chưa được thêm vào cấu hình" in normalized:
         raise TDSAccountNotConfiguredError(message, response_json=payload)
     raise TDSUnknownResponseError(message, response_json=payload)

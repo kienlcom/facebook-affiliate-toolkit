@@ -56,6 +56,18 @@ export interface SessionCounters {
   points_earned: number
 }
 
+export interface AutoOpenStatus {
+  available: boolean
+  mode: 'frontend_manual' | 'local_browser'
+  enabled: boolean
+  paused: boolean
+  state: string
+  interval_seconds: number
+  next_open_at: string | null
+  seconds_remaining: number | null
+  reason: string | null
+}
+
 export interface Job {
   id: string
   session_id: string
@@ -76,6 +88,7 @@ export interface SessionSummary {
   elapsed_seconds: number
   remaining_jobs: number
   jobs: Job[]
+  auto_open: AutoOpenStatus
 }
 
 export interface FetchJobsResponse {

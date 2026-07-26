@@ -3,6 +3,7 @@ import axios, { AxiosError } from 'axios'
 import type {
   AccountProfile,
   ApiErrorEnvelope,
+  AutoOpenStatus,
   ClaimResponse,
   FetchJobsResponse,
   HealthResponse,
@@ -84,6 +85,26 @@ export const api = {
 
   async fetchJobs(sessionId: string): Promise<FetchJobsResponse> {
     return (await http.post<FetchJobsResponse>(`/api/sessions/${sessionId}/fetch`)).data
+  },
+
+  async setAutoOpen(sessionId: string, enabled: boolean): Promise<AutoOpenStatus> {
+    return (
+      await http.post<AutoOpenStatus>(`/api/sessions/${sessionId}/auto-open`, {
+        enabled
+      })
+    ).data
+  },
+
+  async pauseAutoOpen(sessionId: string): Promise<AutoOpenStatus> {
+    return (
+      await http.post<AutoOpenStatus>(`/api/sessions/${sessionId}/auto-open/pause`)
+    ).data
+  },
+
+  async resumeAutoOpen(sessionId: string): Promise<AutoOpenStatus> {
+    return (
+      await http.post<AutoOpenStatus>(`/api/sessions/${sessionId}/auto-open/resume`)
+    ).data
   },
 
   async stopSession(sessionId: string, reason = 'USER_REQUESTED'): Promise<Session> {

@@ -11,6 +11,7 @@ from app.config.settings import Settings
 from app.core.errors import ConflictError, NotFoundError
 from app.db.models import Account, Job, Session
 from app.jobs.state_machine import ACTIVE_STATES, JobState, transition
+from app.platforms.facebook.auto_advance import AutoOpenCoordinator
 from app.providers.tds.models import TDSProviderConfig
 from app.ws.manager import WebSocketManager
 
@@ -34,11 +35,13 @@ class SessionService:
         session_factory: async_sessionmaker[AsyncSession],
         provider_config: TDSProviderConfig,
         ws_manager: WebSocketManager,
+        auto_open_coordinator: AutoOpenCoordinator | None = None,
     ) -> None:
         self._settings = settings
         self._session_factory = session_factory
         self._provider_config = provider_config
         self._ws_manager = ws_manager
+        self._auto_open_coordinator = auto_open_coordinator
 
     async def get_local_account(self) -> Account:
         async with self._session_factory() as db:
@@ -100,6 +103,8 @@ class SessionService:
             "session.started",
             {"status": session.status, "profile_key": session.profile_key},
         )
+        if self._auto_open_coordinator is not None:
+            await self._auto_open_coordinator.register_session(session.id)
         return session
 
     async def get(self, session_id: UUID, *, for_update: bool = False) -> Session:
@@ -125,6 +130,8 @@ class SessionService:
             )
 
     async def stop(self, session_id: UUID, reason: str) -> Session:
+        if self._auto_open_coordinator is not None:
+            await self._auto_open_coordinator.stop_session(session_id, reason)
         now = datetime.now(UTC)
         async with self._session_factory() as db:
             session = await self._get_locked(db, session_id)
@@ -166,6 +173,11 @@ class SessionService:
         warning_type: str,
         note: str | None,
     ) -> Session:
+        if self._auto_open_coordinator is not None:
+            await self._auto_open_coordinator.stop_session(
+                session_id,
+                f"ACCOUNT_WARNING:{warning_type}",
+            )
         now = datetime.now(UTC)
         reason = f"ACCOUNT_WARNING:{warning_type}"
         async with self._session_factory() as db:
@@ -205,6 +217,11 @@ class SessionService:
         return session
 
     async def stop_for_auth_failure(self, session_id: UUID) -> None:
+        if self._auto_open_coordinator is not None:
+            await self._auto_open_coordinator.stop_session(
+                session_id,
+                "TDS_AUTH_ERROR",
+            )
         now = datetime.now(UTC)
         async with self._session_factory() as db:
             session = await self._get_locked(db, session_id)

@@ -10,6 +10,7 @@ defineProps<{
   countdown: number
   busy: boolean
   sessionRunning: boolean
+  manualLinkOpening: boolean
 }>()
 
 defineEmits<{
@@ -55,6 +56,7 @@ function formatTime(value: string | null): string {
         :countdown="countdown"
         :busy="busy"
         :session-running="sessionRunning"
+        :manual-link-opening="manualLinkOpening"
         @open="$emit('open')"
         @reopen="$emit('reopen')"
         @complete="$emit('complete')"

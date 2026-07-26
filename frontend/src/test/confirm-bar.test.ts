@@ -10,7 +10,8 @@ describe('ConfirmBar', () => {
         state: 'WAITING_USER',
         countdown: 2,
         busy: false,
-        sessionRunning: true
+        sessionRunning: true,
+        manualLinkOpening: true
       }
     })
     const button = wrapper.get('[data-testid="complete-button"]')
@@ -21,5 +22,31 @@ describe('ConfirmBar', () => {
     expect(button.attributes('disabled')).toBeUndefined()
     await button.trigger('click')
     expect(wrapper.emitted('complete')).toHaveLength(1)
+  })
+
+  it('does not expose frontend link opening controls in local browser mode', () => {
+    const validated = mount(ConfirmBar, {
+      props: {
+        state: 'VALIDATED',
+        countdown: 0,
+        busy: false,
+        sessionRunning: true,
+        manualLinkOpening: false
+      }
+    })
+    const waiting = mount(ConfirmBar, {
+      props: {
+        state: 'WAITING_USER',
+        countdown: 0,
+        busy: false,
+        sessionRunning: true,
+        manualLinkOpening: false
+      }
+    })
+
+    expect(validated.text()).toContain('Chờ backend mở link')
+    expect(validated.find('button').exists()).toBe(false)
+    expect(waiting.text()).not.toContain('Mở lại')
+    expect(waiting.get('[data-testid="complete-button"]').text()).toContain('Hoàn thành')
   })
 })

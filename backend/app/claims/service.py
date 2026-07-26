@@ -14,6 +14,7 @@ from app.core.errors import ConflictError, NotFoundError, TooEarlyError
 from app.core.redaction import redact
 from app.db.models import Account, Job, JobAttempt, Session
 from app.jobs.state_machine import JobState, transition
+from app.platforms.facebook.auto_advance import AutoOpenCoordinator
 from app.providers.tds.client import TDSClient
 from app.providers.tds.errors import (
     TDSAuthError,
@@ -103,6 +104,7 @@ class ClaimService:
         provider_config: TDSProviderConfig,
         ws_manager: WebSocketManager,
         sleep: SleepCallable = asyncio.sleep,
+        auto_open_coordinator: AutoOpenCoordinator | None = None,
     ) -> None:
         self._session_factory = session_factory
         self._tds_client = tds_client
@@ -110,6 +112,7 @@ class ClaimService:
         self._provider_config = provider_config
         self._ws_manager = ws_manager
         self._sleep = sleep
+        self._auto_open_coordinator = auto_open_coordinator
 
     async def claim(self, job_id: UUID) -> ClaimOutcome:
         started_at = datetime.now(UTC)
@@ -177,6 +180,17 @@ class ClaimService:
             )
             if isinstance(error, TDSAuthError):
                 await self._session_service.stop_for_auth_failure(context.session_id)
+            elif isinstance(error, (TDSRateLimitError, TDSCircuitOpenError)):
+                if self._auto_open_coordinator is not None:
+                    await self._auto_open_coordinator.pause_for_safety(
+                        context.session_id,
+                        error.code,
+                    )
+            elif (
+                self._failure_target(error) == JobState.CLAIM_REJECTED
+                and self._auto_open_coordinator is not None
+            ):
+                await self._auto_open_coordinator.job_resolved(context.session_id)
             raise
 
         settlement: TDSClaimResult | None = None
@@ -206,6 +220,14 @@ class ClaimService:
         )
         if isinstance(settlement_error, TDSAuthError):
             await self._session_service.stop_for_auth_failure(context.session_id)
+        elif isinstance(settlement_error, (TDSRateLimitError, TDSCircuitOpenError)):
+            if self._auto_open_coordinator is not None:
+                await self._auto_open_coordinator.pause_for_safety(
+                    context.session_id,
+                    settlement_error.code,
+                )
+        elif self._auto_open_coordinator is not None:
+            await self._auto_open_coordinator.job_resolved(context.session_id)
         return outcome
 
     async def _finalize_success(
