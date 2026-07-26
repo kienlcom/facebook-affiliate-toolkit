@@ -21,6 +21,7 @@ async def profiles(
             platform=profile.platform,
             minimum_claim_wait_seconds=profile.minimum_claim_wait_seconds,
             settlement_threshold=profile.settlement_threshold,
+            verification_status=profile.verification_status,
         )
         for profile in config.profiles
         if profile.enabled and profile.verified_at

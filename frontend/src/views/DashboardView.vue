@@ -20,6 +20,9 @@ const apiReady = computed(
 const activeSession = computed(() =>
   sessionStore.current?.status === 'RUNNING' ? sessionStore.current : null
 )
+const selectedProfileDetails = computed(() =>
+  accountStore.profiles.find((profile) => profile.key === selectedProfile.value)
+)
 
 watch(
   () => accountStore.profiles,
@@ -108,7 +111,9 @@ async function stopActiveSession(): Promise<void> {
         <div class="panel-heading">
           <div>
             <p class="eyebrow">Phiên mới</p>
-            <h2 id="start-title">Facebook Page</h2>
+            <h2 id="start-title">
+              {{ activeSession ? activeSession.profile_key : selectedProfileDetails?.display_name ?? 'Facebook' }}
+            </h2>
           </div>
           <Server :size="20" aria-hidden="true" />
         </div>
@@ -139,8 +144,8 @@ async function stopActiveSession(): Promise<void> {
             :disabled="accountStore.loading || sessionStore.loading"
           />
           <div class="guardrail-row">
-            <span><ShieldCheck :size="16" /> {{ accountStore.profiles[0]?.minimum_claim_wait_seconds ?? 3 }}s min-wait</span>
-            <span>{{ accountStore.profiles[0]?.settlement_threshold ?? 5 }} jobs / batch</span>
+            <span><ShieldCheck :size="16" /> {{ selectedProfileDetails?.minimum_claim_wait_seconds ?? 3 }}s min-wait</span>
+            <span>{{ selectedProfileDetails?.settlement_threshold ?? 5 }} jobs / batch</span>
           </div>
           <button
             class="button button-primary start-button"

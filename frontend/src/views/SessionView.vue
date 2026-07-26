@@ -7,6 +7,7 @@ import { SessionSocket } from '../api/ws'
 import type { SessionEvent, WarningType } from '../api/types'
 import JobPanel from '../components/JobPanel.vue'
 import LogPanel from '../components/LogPanel.vue'
+import NoJobsDialog from '../components/NoJobsDialog.vue'
 import SessionStats from '../components/SessionStats.vue'
 import StatusIndicator from '../components/StatusIndicator.vue'
 import WarningDialog from '../components/WarningDialog.vue'
@@ -25,6 +26,7 @@ const logsStore = useLogsStore()
 const now = ref(Date.now())
 const socketStatus = ref<'connecting' | 'connected' | 'disconnected'>('connecting')
 const warningOpen = ref(false)
+const noJobsOpen = ref(false)
 const pageLoading = ref(true)
 const summarySyncedAt = ref(Date.now())
 let timer: number | null = null
@@ -34,6 +36,27 @@ const profile = computed(() =>
   accountStore.profiles.find((item) => item.key === sessionStore.current?.profile_key)
 )
 const sessionRunning = computed(() => sessionStore.current?.status === 'RUNNING')
+const fetchLocked = computed(() => sessionStore.isFetchLocked(props.id, now.value))
+const fetchLockRemaining = computed(() => {
+  const expiresAt = sessionStore.fetchLockUntil(props.id)
+  if (expiresAt === null) return 0
+  return Math.max(0, Math.ceil((expiresAt - now.value) / 1000))
+})
+const fetchDisabled = computed(
+  () =>
+    !sessionRunning.value ||
+    jobsStore.busy ||
+    jobsStore.hasActiveJobs ||
+    fetchLocked.value ||
+    pageLoading.value
+)
+const fetchTitle = computed(() => {
+  if (fetchLocked.value) {
+    return `Có thể lấy lại nhiệm vụ sau ${fetchLockRemaining.value} giây`
+  }
+  if (jobsStore.hasActiveJobs) return 'Xử lý hết batch hiện tại trước khi lấy thêm'
+  return 'Lấy batch nhiệm vụ mới'
+})
 const countdown = computed(() => {
   const openedAt = jobsStore.current?.opened_at
   if (!openedAt) return 0
@@ -86,8 +109,12 @@ async function refresh(): Promise<void> {
 
 async function fetchJobs(): Promise<void> {
   try {
-    await jobsStore.fetch(props.id)
+    const fetchedCount = await jobsStore.fetch(props.id)
     await refresh()
+    if (fetchedCount === 0) {
+      sessionStore.lockFetch(props.id)
+      noJobsOpen.value = true
+    }
   } catch {
     return
   }
@@ -143,6 +170,20 @@ async function stopSession(): Promise<void> {
   }
 }
 
+async function stopAfterNoJobs(): Promise<void> {
+  try {
+    await sessionStore.stop(props.id)
+    noJobsOpen.value = false
+    await router.push('/')
+  } catch {
+    return
+  }
+}
+
+function continueAfterNoJobs(): void {
+  noJobsOpen.value = false
+}
+
 async function submitWarning(type: WarningType, note: string | null): Promise<void> {
   try {
     await sessionStore.reportWarning(props.id, type, note)
@@ -183,8 +224,8 @@ function handleEvent(event: SessionEvent): void {
         <button
           class="button button-secondary"
           type="button"
-          :disabled="!sessionRunning || jobsStore.busy || jobsStore.hasActiveJobs || pageLoading"
-          :title="jobsStore.hasActiveJobs ? 'Xử lý hết batch hiện tại trước khi lấy thêm' : 'Lấy batch nhiệm vụ mới'"
+          :disabled="fetchDisabled"
+          :title="fetchTitle"
           @click="fetchJobs"
         >
           <Download :size="17" /> Lấy nhiệm vụ
@@ -211,10 +252,27 @@ function handleEvent(event: SessionEvent): void {
     </div>
 
     <div v-if="error" class="alert alert-error" role="alert">{{ error }}</div>
-    <div v-if="jobsStore.claimResult" class="alert alert-success" role="status">
-      <strong>{{ jobsStore.claimResult.message }}</strong>
-      <span v-if="jobsStore.claimResult.points_added">
-        +{{ jobsStore.claimResult.points_added.toLocaleString('vi-VN') }} xu
+    <div v-if="fetchLocked && !noJobsOpen" class="alert alert-warning" role="status">
+      Không có nhiệm vụ mới. Có thể thử lại sau {{ fetchLockRemaining }} giây.
+    </div>
+    <div
+      v-if="jobsStore.claimResult"
+      class="alert alert-success"
+      data-testid="claim-notice"
+      role="status"
+      aria-live="polite"
+    >
+      <strong v-if="jobsStore.claimResult.points_added > 0">
+        Đã claim thành công {{ jobsStore.claimResult.points_added.toLocaleString('vi-VN') }} xu.
+      </strong>
+      <strong v-else>{{ jobsStore.claimResult.message }}</strong>
+      <span
+        v-if="
+          jobsStore.claimResult.points_added > 0 &&
+          jobsStore.claimResult.balance_after !== null
+        "
+      >
+        Số dư TDS: {{ jobsStore.claimResult.balance_after.toLocaleString('vi-VN') }} xu
       </span>
     </div>
 
@@ -276,6 +334,12 @@ function handleEvent(event: SessionEvent): void {
       :busy="sessionStore.loading"
       @close="warningOpen = false"
       @submit="submitWarning"
+    />
+    <NoJobsDialog
+      :open="noJobsOpen"
+      :busy="sessionStore.loading"
+      @stop="stopAfterNoJobs"
+      @continue="continueAfterNoJobs"
     />
   </main>
 </template>

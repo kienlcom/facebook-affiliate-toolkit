@@ -25,7 +25,7 @@ defineEmits<{
     >
       <option value="" disabled>Chọn profile</option>
       <option v-for="profile in profiles" :key="profile.key" :value="profile.key">
-        {{ profile.display_name }}
+        {{ profile.display_name }}{{ profile.verification_status === 'PILOT' ? ' (Pilot)' : '' }}
       </option>
     </select>
   </label>

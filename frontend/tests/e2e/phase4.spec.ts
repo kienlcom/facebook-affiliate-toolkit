@@ -72,14 +72,14 @@ async function fulfillJson(route: Route, body: unknown): Promise<void> {
   })
 }
 
-async function mockApi(page: Page): Promise<void> {
+async function mockApi(page: Page, sessionSummary: unknown = summary): Promise<void> {
   await page.routeWebSocket('**/ws/**', () => undefined)
   await page.route('**/health', (route) => fulfillJson(route, { status: 'ok' }))
   await page.route('**/api/account/profile', (route) => fulfillJson(route, account))
   await page.route('**/api/profiles', (route) => fulfillJson(route, [profile]))
   await page.route('**/api/sessions/active', (route) => fulfillJson(route, null))
   await page.route(`**/api/sessions/${sessionId}/summary`, (route) =>
-    fulfillJson(route, summary)
+    fulfillJson(route, sessionSummary)
   )
 }
 
@@ -124,4 +124,43 @@ test('session workspace remains usable on mobile', async ({ page }) => {
     path: 'test-results/phase4-session-mobile.png',
     fullPage: true
   })
+})
+
+test('no-jobs response offers stop or continue and locks fetch', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const emptySummary = {
+    ...summary,
+    counters: {
+      fetched: 0,
+      opened: 0,
+      confirmed: 0,
+      claimed: 0,
+      failed: 0,
+      points_earned: 0
+    },
+    jobs: []
+  }
+  await mockApi(page, emptySummary)
+  await page.route(`**/api/sessions/${sessionId}/fetch`, (route) =>
+    fulfillJson(route, { jobs: [], duplicates_ignored: 0 })
+  )
+  await page.goto(`/sessions/${sessionId}`)
+
+  const fetchButton = page.getByRole('button', { name: /Lấy nhiệm vụ/ })
+  await expect(fetchButton).toBeEnabled()
+  await fetchButton.click()
+  const dialog = page.getByRole('alertdialog')
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Dừng phiên' })).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Tiếp tục' })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+
+  await page.screenshot({
+    path: 'test-results/phase4-no-jobs-mobile.png',
+    fullPage: true
+  })
+
+  await dialog.getByRole('button', { name: 'Tiếp tục' }).click()
+  await expect(fetchButton).toBeDisabled()
+  await expect(page.getByText(/Có thể thử lại sau \d+ giây/)).toBeVisible()
 })

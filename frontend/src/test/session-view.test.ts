@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAccountStore } from '../stores/account'
+import { useJobsStore } from '../stores/jobs'
 import SessionView from '../views/SessionView.vue'
 
 const push = vi.fn()
@@ -109,6 +110,15 @@ describe('SessionView', () => {
       summary.session.stop_reason = 'ACCOUNT_WARNING:CHECKPOINT'
       return structuredClone(summary.session)
     })
+    apiMock.fetchJobs.mockResolvedValue({
+      jobs: [],
+      duplicates_ignored: 0
+    })
+    apiMock.stopSession.mockImplementation(async () => {
+      summary.session.status = 'STOPPED'
+      summary.session.stop_reason = 'USER_REQUESTED'
+      return structuredClone(summary.session)
+    })
   })
 
   it('opens Facebook with isolation flags and records the explicit open command', async () => {
@@ -170,5 +180,108 @@ describe('SessionView', () => {
     const fetchButton = wrapper.findAll('button').find((button) => button.text().includes('Lấy nhiệm vụ'))
     expect(fetchButton?.attributes('disabled')).toBeDefined()
     expect(wrapper.text()).toContain('Session')
+  })
+
+  it('shows the points claimed and TDS balance after settlement succeeds', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAccountStore().profiles = [
+      {
+        key: 'facebook_page',
+        display_name: 'Facebook Page Follow',
+        provider: 'tds',
+        platform: 'facebook',
+        minimum_claim_wait_seconds: 3,
+        settlement_threshold: 5
+      }
+    ]
+    const wrapper = mount(SessionView, {
+      props: { id: 'session-id' },
+      global: { plugins: [pinia] }
+    })
+    await flushPromises()
+
+    useJobsStore().claimResult = {
+      job_id: 'job-id',
+      status: 'CLAIMED',
+      points_added: 6300,
+      balance_after: 81300,
+      message: 'Thành công',
+      cache_count: 5,
+      settlement_pending: false
+    }
+    await wrapper.vm.$nextTick()
+
+    const notice = wrapper.get('[data-testid="claim-notice"]')
+    expect(notice.text()).toContain('Đã claim thành công 6.300 xu.')
+    expect(notice.text()).toContain('Số dư TDS: 81.300 xu')
+  })
+
+  it('shows no-jobs dialog and locks fetch when the user continues', async () => {
+    summary.jobs = []
+    summary.counters.fetched = 0
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAccountStore().profiles = [
+      {
+        key: 'facebook_page',
+        display_name: 'Facebook Page Follow',
+        provider: 'tds',
+        platform: 'facebook',
+        minimum_claim_wait_seconds: 3,
+        settlement_threshold: 5
+      }
+    ]
+    const wrapper = mount(SessionView, {
+      props: { id: 'session-id' },
+      global: { plugins: [pinia] }
+    })
+    await flushPromises()
+
+    const fetchButton = wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('Lấy nhiệm vụ'))
+    await fetchButton?.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[role="alertdialog"]').text()).toContain('Không có nhiệm vụ')
+    await wrapper.get('.no-jobs-continue').trigger('click')
+
+    expect(wrapper.find('[role="alertdialog"]').exists()).toBe(false)
+    expect(fetchButton?.attributes('disabled')).toBeDefined()
+    expect(wrapper.text()).toContain('Có thể thử lại sau')
+  })
+
+  it('stops the session and returns to dashboard from no-jobs dialog', async () => {
+    summary.jobs = []
+    summary.counters.fetched = 0
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAccountStore().profiles = [
+      {
+        key: 'facebook_page',
+        display_name: 'Facebook Page Follow',
+        provider: 'tds',
+        platform: 'facebook',
+        minimum_claim_wait_seconds: 3,
+        settlement_threshold: 5
+      }
+    ]
+    const wrapper = mount(SessionView, {
+      props: { id: 'session-id' },
+      global: { plugins: [pinia] }
+    })
+    await flushPromises()
+
+    const fetchButton = wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('Lấy nhiệm vụ'))
+    await fetchButton?.trigger('click')
+    await flushPromises()
+    await wrapper.get('.no-jobs-stop').trigger('click')
+    await flushPromises()
+
+    expect(apiMock.stopSession).toHaveBeenCalledWith('session-id')
+    expect(push).toHaveBeenCalledWith('/')
   })
 })

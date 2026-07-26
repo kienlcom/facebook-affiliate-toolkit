@@ -54,6 +54,21 @@ def test_jobs_parser_handles_jobs_and_empty_as_normal_results() -> None:
     assert empty.jobs == []
 
 
+def test_facebook_follow_profile_uses_live_verified_mapping() -> None:
+    profile = load_provider_config().get_enabled_profile("facebook_follow")
+    jobs = parse_jobs(200, {}, load_fixture("jobs_follow_success.json"), profile)
+
+    assert profile.verification_status == "PILOT"
+    assert profile.job_field == "facebook_follow"
+    assert profile.claim_type == "facebook_follow_cache"
+    assert profile.settlement_type == "facebook_follow"
+    assert profile.settlement_id == "facebook_api"
+    assert len(jobs.jobs) == 8
+    assert jobs.jobs[0].action == "follow"
+    assert jobs.jobs[0].code == "[REDACTED]"
+    assert jobs.jobs[0].url == "https://www.facebook.com/100095206581446"
+
+
 def test_claim_parser_handles_cache_and_settlement_success() -> None:
     cached = parse_claim(200, {}, load_fixture("claim_cache_success.json"))
     settled = parse_claim(200, {}, load_fixture("claim_success.json"))

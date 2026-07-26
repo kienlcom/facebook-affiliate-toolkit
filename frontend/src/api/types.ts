@@ -28,6 +28,7 @@ export interface JobProfile {
   platform: string
   minimum_claim_wait_seconds: number
   settlement_threshold: number
+  verification_status?: 'GO' | 'PILOT'
 }
 
 export interface SessionLimits {

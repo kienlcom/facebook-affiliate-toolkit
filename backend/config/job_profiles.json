@@ -36,8 +36,38 @@
       },
       "minimum_claim_wait_seconds": 3,
       "enabled": true,
+      "verification_status": "GO",
       "verified_at": "2026-07-25",
       "fixture_version": "phase0-2026-07-25"
+    },
+    {
+      "key": "facebook_follow",
+      "display_name": "Facebook Follow",
+      "provider": "tds",
+      "platform": "facebook",
+      "job_method": "GET",
+      "job_path": "",
+      "job_field": "facebook_follow",
+      "claim_method": "GET",
+      "claim_path": "coin/",
+      "claim_type": "facebook_follow_cache",
+      "id_format": "job.code",
+      "settlement_type": "facebook_follow",
+      "settlement_id": "facebook_api",
+      "settlement_threshold": 5,
+      "url_template": "https://www.facebook.com/{external_id}",
+      "response_mapping": {
+        "jobs_field": "data",
+        "cache_field": "cache",
+        "external_id_field": "id",
+        "code_field": "code",
+        "action_field": "type"
+      },
+      "minimum_claim_wait_seconds": 3,
+      "enabled": true,
+      "verification_status": "PILOT",
+      "verified_at": "2026-07-26",
+      "fixture_version": "facebook-follow-spike-2026-07-26"
     }
   ]
 }

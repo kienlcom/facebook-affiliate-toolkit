@@ -10,3 +10,4 @@ class JobProfileResponse(BaseModel):
     platform: str
     minimum_claim_wait_seconds: int
     settlement_threshold: int
+    verification_status: str

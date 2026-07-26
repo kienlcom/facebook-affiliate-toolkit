@@ -36,3 +36,12 @@ only.
 - HTTP 429 opens the persisted circuit breaker and honors `Retry-After`.
 
 No unknown issue blocks the verified MVP profile.
+
+## Additional profile: facebook_follow
+
+Current decision: `PILOT_PENDING_LIVE_CLAIM`.
+
+The official Postman mapping and a sanitized live get-jobs response are
+verified. Eight jobs were available on 2026-07-26. The profile may be used only
+for the manual pilot flow; promote it to `GO` only after review-cache and
+settlement responses succeed for a manually completed batch.

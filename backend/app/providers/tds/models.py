@@ -47,6 +47,7 @@ class TDSJobProfile(BaseModel):
     response_mapping: TDSJobResponseMapping
     minimum_claim_wait_seconds: int = Field(ge=0)
     enabled: bool
+    verification_status: Literal["GO", "PILOT"] = "GO"
     verified_at: str
     fixture_version: str
 

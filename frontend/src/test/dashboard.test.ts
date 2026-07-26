@@ -113,6 +113,52 @@ describe('DashboardView', () => {
     })
   })
 
+  it('starts the selected Facebook Follow pilot profile', async () => {
+    apiMock.profiles.mockResolvedValue([
+      {
+        key: 'facebook_page',
+        display_name: 'Facebook Page Follow',
+        provider: 'tds',
+        platform: 'facebook',
+        minimum_claim_wait_seconds: 3,
+        settlement_threshold: 5,
+        verification_status: 'GO'
+      },
+      {
+        key: 'facebook_follow',
+        display_name: 'Facebook Follow',
+        provider: 'tds',
+        platform: 'facebook',
+        minimum_claim_wait_seconds: 3,
+        settlement_threshold: 5,
+        verification_status: 'PILOT'
+      }
+    ])
+    apiMock.createSession.mockResolvedValue({
+      id: 'follow-session-id',
+      account_id: 'account-id',
+      status: 'RUNNING',
+      profile_key: 'facebook_follow',
+      started_at: '2026-07-26T12:00:00Z',
+      ended_at: null,
+      stop_reason: null,
+      limits: { max_jobs: 20, max_duration_minutes: 30 }
+    })
+
+    const wrapper = mount(DashboardView, {
+      global: { plugins: [createPinia()] }
+    })
+    await flushPromises()
+
+    await wrapper.get('#profile-select').setValue('facebook_follow')
+    expect(wrapper.text()).toContain('Facebook Follow')
+    expect(wrapper.text()).toContain('Pilot')
+    await wrapper.get('.start-button').trigger('click')
+    await flushPromises()
+
+    expect(apiMock.createSession).toHaveBeenCalledWith('facebook_follow')
+  })
+
   it('resumes or stops the active session from the dashboard', async () => {
     apiMock.activeSession.mockResolvedValue({
       id: 'active-session-id',

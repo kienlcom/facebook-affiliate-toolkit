@@ -78,6 +78,8 @@ def test_rest_fetch_dedup_state_actions_warning_and_websocket() -> None:
             profiles_response = client.get("/api/profiles")
             assert profiles_response.status_code == 200
             assert profiles_response.json()[0]["key"] == "facebook_page"
+            assert profiles_response.json()[1]["key"] == "facebook_follow"
+            assert profiles_response.json()[1]["verification_status"] == "PILOT"
 
             created = client.post(
                 "/api/sessions",

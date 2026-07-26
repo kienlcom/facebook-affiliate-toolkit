@@ -48,6 +48,12 @@ export const useJobsStore = defineStore('jobs', () => {
 
   function setJobs(nextJobs: Job[]): void {
     jobs.value = nextJobs
+    if (
+      claimResult.value &&
+      !nextJobs.some((job) => job.id === claimResult.value?.job_id)
+    ) {
+      claimResult.value = null
+    }
     if (!selectedId.value || !nextJobs.some((job) => job.id === selectedId.value)) {
       selectedId.value = current.value?.id ?? nextJobs[0]?.id ?? null
     }
@@ -64,6 +70,7 @@ export const useJobsStore = defineStore('jobs', () => {
   }
 
   async function fetch(sessionId: string): Promise<number> {
+    claimResult.value = null
     return run(async () => {
       const result = await api.fetchJobs(sessionId)
       for (const job of result.jobs) {
@@ -80,6 +87,7 @@ export const useJobsStore = defineStore('jobs', () => {
   }
 
   async function confirmAndClaim(jobId: string): Promise<void> {
+    claimResult.value = null
     await run(async () => {
       updateJob((await api.confirm(jobId)).job)
       claimResult.value = await api.claim(jobId)

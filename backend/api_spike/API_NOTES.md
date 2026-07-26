@@ -116,3 +116,21 @@ The production mapping is stored in `backend/config/job_profiles.json`:
 - No Facebook cookie was sent to TDS API.
 - No CAPTCHA, bypass, UI automation, proxy rotation, or anti-detection
   mechanism was needed.
+
+## Facebook Follow mini-spike — 2026-07-26
+
+Status: `PILOT_PENDING_LIVE_CLAIM`.
+
+- Official Postman collection lists `facebook_follow` as a supported jobs field.
+- Live read-only get-jobs returned `cache=0` and eight jobs with `id`, `code`,
+  and `type=follow`.
+- Sanitized fixture: `fixtures/jobs_follow_success.json`.
+- URL mapping: `https://www.facebook.com/{data[].id}`.
+- Official review contract applies to both Page and Follow:
+  `type=facebook_follow_cache&id={job.code}`.
+- Official settlement contract:
+  `type=facebook_follow&id=facebook_api`.
+- Settlement threshold: five cached jobs.
+- No claim has been sent by Codex. The first batch still requires manual
+  Facebook actions and manual confirmation before the mode can be promoted
+  from `PILOT` to `GO`.

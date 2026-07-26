@@ -308,3 +308,71 @@ async def test_review_uses_job_code_and_parses_cache_success(
     assert route.call_count == 1
     assert result.status is TDSClaimStatus.CACHE_ACCEPTED
     assert result.cache_count == 5
+
+
+@pytest.mark.asyncio
+async def test_facebook_follow_uses_official_jobs_review_and_settlement_mapping(
+    client_state: ClientTestState,
+) -> None:
+    job_code = "PILOT-FOLLOW-CODE"
+    with respx.mock(assert_all_called=True) as router:
+        jobs_route = router.get(
+            BASE_URL,
+            params={
+                "fields": "facebook_follow",
+                "access_token": "integration-secret-token",
+            },
+        ).mock(
+            return_value=httpx.Response(
+                200,
+                json=load_fixture("jobs_follow_success.json"),
+            )
+        )
+        review_route = router.get(
+            f"{BASE_URL}coin/",
+            params={
+                "type": "facebook_follow_cache",
+                "id": job_code,
+                "access_token": "integration-secret-token",
+            },
+        ).mock(
+            return_value=httpx.Response(
+                200,
+                json=load_fixture("claim_cache_success.json"),
+            )
+        )
+        settlement_route = router.get(
+            f"{BASE_URL}coin/",
+            params={
+                "type": "facebook_follow",
+                "id": "facebook_api",
+                "access_token": "integration-secret-token",
+            },
+        ).mock(
+            return_value=httpx.Response(
+                200,
+                json=load_fixture("claim_success.json"),
+            )
+        )
+
+        async with build_client(client_state) as client:
+            jobs = await client.fetch_jobs(
+                TDSRequestContext(account_id=client_state.account_id),
+                "facebook_follow",
+            )
+            review = await client.submit_job_review(
+                TDSRequestContext(account_id=client_state.account_id),
+                profile_key="facebook_follow",
+                job_code=job_code,
+            )
+            settlement = await client.settle_rewards(
+                TDSRequestContext(account_id=client_state.account_id),
+                profile_key="facebook_follow",
+            )
+
+    assert jobs_route.call_count == 1
+    assert review_route.call_count == 1
+    assert settlement_route.call_count == 1
+    assert len(jobs.jobs) == 8
+    assert review.status is TDSClaimStatus.CACHE_ACCEPTED
+    assert settlement.status is TDSClaimStatus.SETTLED
