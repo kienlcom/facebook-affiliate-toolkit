@@ -1,0 +1,34 @@
+{
+  "settlement_threshold": 2,
+  "settlement_wait_seconds": 1,
+  "jobs": [
+    {
+      "external_id": "mock-batch-001",
+      "target_id": "page-batch-1",
+      "path": "/profiles/page-batch-1?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-batch-002",
+      "target_id": "page-batch-2",
+      "path": "/profiles/page-batch-2?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-batch-003",
+      "target_id": "page-batch-3",
+      "path": "/profiles/page-batch-3?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-batch-004",
+      "target_id": "page-batch-4",
+      "path": "/profiles/page-batch-4?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    }
+  ]
+}

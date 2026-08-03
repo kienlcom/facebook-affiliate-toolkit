@@ -127,15 +127,17 @@ def test_rest_fetch_dedup_state_actions_warning_and_websocket() -> None:
                 summary = client.get(f"/api/sessions/{session_id}/summary")
                 assert summary.status_code == 200
                 assert summary.json()["auto_open"] == {
-                    "available": False,
-                    "mode": "frontend_manual",
-                    "enabled": False,
+                        "available": False,
+                        "mode": "frontend_manual",
+                        "target": "host_pc",
+                        "enabled": False,
                     "paused": False,
                     "state": "OFF",
                     "interval_seconds": 20,
                     "next_open_at": None,
-                    "seconds_remaining": None,
-                    "reason": None,
+                        "seconds_remaining": None,
+                        "pending_job_id": None,
+                        "reason": None,
                 }
                 assert summary.json()["counters"] == {
                     "fetched": 2,

@@ -26,12 +26,14 @@ const profile = {
 const manualAutoOpen = {
   available: false,
   mode: 'frontend_manual',
+  target: 'host_pc',
   enabled: false,
   paused: false,
   state: 'OFF',
   interval_seconds: 20,
   next_open_at: null,
   seconds_remaining: null,
+  pending_job_id: null,
   reason: null
 }
 
@@ -86,6 +88,7 @@ async function fulfillJson(route: Route, body: unknown): Promise<void> {
 }
 
 async function mockApi(page: Page, sessionSummary: unknown = summary): Promise<void> {
+  const currentSummary = sessionSummary as typeof summary
   await page.routeWebSocket('**/ws/**', () => undefined)
   await page.route('**/health', (route) => fulfillJson(route, { status: 'ok' }))
   await page.route('**/api/account/profile', (route) => fulfillJson(route, account))
@@ -94,6 +97,18 @@ async function mockApi(page: Page, sessionSummary: unknown = summary): Promise<v
   await page.route(`**/api/sessions/${sessionId}/summary`, (route) =>
     fulfillJson(route, sessionSummary)
   )
+  await page.route(`**/api/sessions/${sessionId}/auto-open/target`, (route) => {
+    const payload = route.request().postDataJSON() as {
+      target: 'host_pc' | 'current_device'
+    }
+    return fulfillJson(route, {
+      ...currentSummary.auto_open,
+      target: payload.target,
+      state: currentSummary.auto_open.enabled ? 'IDLE' : 'OFF',
+      pending_job_id: null,
+      reason: null
+    })
+  })
 }
 
 async function expectNoHorizontalOverflow(page: Page): Promise<void> {
@@ -157,12 +172,14 @@ test('local browser mode shows backend controls and no frontend open button', as
     auto_open: {
       available: true,
       mode: 'local_browser',
+      target: 'host_pc',
       enabled: true,
       paused: false,
       state: 'COUNTDOWN',
       interval_seconds: 20,
       next_open_at: new Date(Date.now() + 20_000).toISOString(),
       seconds_remaining: 20,
+      pending_job_id: null,
       reason: null
     },
     jobs: [
@@ -173,6 +190,9 @@ test('local browser mode shows backend controls and no frontend open button', as
       }
     ]
   }
+  await page.addInitScript(() => {
+    window.localStorage.setItem('tds_link_open_target', 'host_pc')
+  })
   await page.setViewportSize({ width: 390, height: 844 })
   await mockApi(page, localSummary)
   await page.route(`**/api/sessions/${sessionId}/auto-open/pause`, (route) =>
@@ -197,6 +217,113 @@ test('local browser mode shows backend controls and no frontend open button', as
     path: 'test-results/phase4-auto-open-mobile.png',
     fullPage: true
   })
+})
+
+test('current-device target opens the selected job from one user tap', async ({ page }) => {
+  const deviceSummary = {
+    ...summary,
+    auto_open: {
+      available: true,
+      mode: 'local_browser',
+      target: 'current_device',
+      enabled: true,
+      paused: false,
+      state: 'WAITING_DEVICE',
+      interval_seconds: 20,
+      next_open_at: null,
+      seconds_remaining: null,
+      pending_job_id: jobId,
+      reason: 'WAITING_FOR_DEVICE_TAP'
+    },
+    jobs: [
+      {
+        ...summary.jobs[0],
+        state: 'VALIDATED',
+        opened_at: null
+      }
+    ]
+  }
+  await page.addInitScript(() => {
+    window.localStorage.setItem('tds_link_open_target', 'current_device')
+    window.open = ((url?: string | URL) => {
+      window.sessionStorage.setItem('last-opened-url', String(url))
+      return null
+    }) as typeof window.open
+  })
+  await mockApi(page, deviceSummary)
+  await page.route(`**/api/jobs/${jobId}/opened`, (route) =>
+    fulfillJson(route, {
+      job: {
+        ...deviceSummary.jobs[0],
+        state: 'WAITING_USER',
+        opened_at: new Date().toISOString()
+      }
+    })
+  )
+  await page.goto(`/sessions/${sessionId}`)
+
+  await expect(page.getByRole('button', { name: 'Mở Facebook' })).toBeVisible()
+  await page.getByRole('button', { name: 'Mở Facebook' }).click()
+
+  await expect
+    .poll(() => page.evaluate(() => sessionStorage.getItem('last-opened-url')))
+    .toBe(deviceSummary.jobs[0].url)
+})
+
+test('queue reveals and labels the job opened by auto-advance', async ({ page }) => {
+  const openedIndex = 7
+  const jobs = Array.from({ length: 10 }, (_, index) => ({
+    ...summary.jobs[0],
+    id: `job-${index}`,
+    external_id: `10000000000000${index}`,
+    url: `https://www.facebook.com/10000000000000${index}`,
+    state: index === openedIndex ? 'WAITING_USER' : 'CLAIMED',
+    opened_at:
+      index === openedIndex
+        ? new Date(now.getTime() - 5_000).toISOString()
+        : new Date(now.getTime() - 20_000).toISOString(),
+    claimed_at:
+      index === openedIndex
+        ? null
+        : new Date(now.getTime() - 10_000).toISOString()
+  }))
+  const queueSummary = {
+    ...summary,
+    auto_open: {
+      ...manualAutoOpen,
+      available: true,
+      mode: 'local_browser',
+      enabled: true,
+      state: 'WAITING_USER'
+    },
+    jobs
+  }
+  await page.setViewportSize({ width: 390, height: 844 })
+  await mockApi(page, queueSummary)
+  await page.goto(`/sessions/${sessionId}`)
+
+  const queue = page.locator('.queue-panel')
+  const selected = page.locator(`[data-job-id="job-${openedIndex}"]`)
+  await expect(selected).toHaveClass(/selected/)
+  await expect(selected).toContainText(`# 10000000000000${openedIndex}`)
+  await expect(page.locator('.job-id-line')).toContainText(
+    `10000000000000${openedIndex}`
+  )
+  await expect
+    .poll(() =>
+      queue.evaluate((panel) => {
+        const item = panel.querySelector('.queue-item.selected')
+        if (!item) return false
+        const panelRect = panel.getBoundingClientRect()
+        const itemRect = item.getBoundingClientRect()
+        return (
+          panel.scrollTop > 0 &&
+          itemRect.top >= panelRect.top &&
+          itemRect.bottom <= panelRect.bottom
+        )
+      })
+    )
+    .toBe(true)
 })
 
 test('session workspace remains usable on mobile', async ({ page }) => {

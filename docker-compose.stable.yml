@@ -1,0 +1,83 @@
+name: facebook-tds-stable
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tds
+      POSTGRES_PASSWORD: tds
+      POSTGRES_DB: tds_assistant
+    volumes:
+      - stable_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tds -d tds_assistant"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: facebook-tds-assistant-backend:stable
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+      - ./.stable/host-opener.env
+    environment:
+      APP_ENV: local
+      DATABASE_URL: postgresql+asyncpg://tds:tds@postgres:5432/tds_assistant
+      CORS_ORIGINS: http://localhost:8080
+      LINK_OPENER_MODE: local_browser
+      LINK_OPENER_TRANSPORT: host_companion
+      AUTO_OPEN_ENABLED: "true"
+      AUTO_OPEN_INTERVAL_SECONDS: "5"
+      HOST_LINK_OPENER_URL: http://host.docker.internal:18765/open
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command:
+      - sh
+      - -c
+      - python -m alembic upgrade head && exec python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: facebook-tds-assistant-frontend:stable
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --quiet
+        - --tries=1
+        - --output-document=/dev/null
+        - http://127.0.0.1:8080/health
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+volumes:
+  stable_postgres_data:

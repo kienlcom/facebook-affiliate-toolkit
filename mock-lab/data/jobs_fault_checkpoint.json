@@ -1,0 +1,13 @@
+{
+  "settlement_threshold": 1,
+  "settlement_wait_seconds": 1,
+  "jobs": [
+    {
+      "external_id": "mock-checkpoint-001",
+      "target_id": "page-checkpoint",
+      "path": "/profiles/page-checkpoint?scenario=checkpoint",
+      "points": 600,
+      "minimum_claim_wait_seconds": 0
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "settlement_threshold": 1,
+  "settlement_wait_seconds": 1,
+  "jobs": [
+    {
+      "external_id": "mock-captcha-001",
+      "target_id": "page-captcha",
+      "path": "/profiles/page-captcha?scenario=captcha",
+      "points": 600,
+      "minimum_claim_wait_seconds": 0
+    }
+  ]
+}

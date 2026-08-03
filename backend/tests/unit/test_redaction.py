@@ -20,6 +20,11 @@ def test_redacts_nested_json_secrets() -> None:
     assert redact(payload) == {"outer": [{"refresh_token": REDACTED}, {"client_secret": REDACTED}]}
 
 
+def test_redacts_host_link_opener_token() -> None:
+    payload = {"HOST_LINK_OPENER_TOKEN": "bridge-secret"}
+    assert redact(payload) == {"HOST_LINK_OPENER_TOKEN": REDACTED}
+
+
 def test_redacts_oauth_code() -> None:
     payload = {"code": "oauth-code"}
     assert redact(payload) == {"code": REDACTED}

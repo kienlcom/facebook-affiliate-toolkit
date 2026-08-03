@@ -42,6 +42,11 @@ def pytest_configure() -> None:
 
     os.environ["TDS_ACCESS_TOKEN"] = "test-token"
     os.environ["DATABASE_URL"] = test_database_url
+    os.environ["APP_ENV"] = "test"
+    os.environ["LINK_OPENER_MODE"] = "frontend_manual"
+    os.environ["LINK_OPENER_TRANSPORT"] = "direct"
+    os.environ["AUTO_OPEN_ENABLED"] = "false"
+    os.environ["AUTO_OPEN_INTERVAL_SECONDS"] = "20"
     asyncio.run(_ensure_test_database())
 
     backend_dir = Path(__file__).parents[1]

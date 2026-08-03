@@ -171,6 +171,13 @@ export const useSessionStore = defineStore('session', () => {
     await updateAutoOpen(() => api.setAutoOpen(sessionId, enabled))
   }
 
+  async function setAutoOpenTarget(
+    sessionId: string,
+    target: AutoOpenStatus['target']
+  ): Promise<void> {
+    await updateAutoOpen(() => api.setAutoOpenTarget(sessionId, target))
+  }
+
   async function pauseAutoOpen(sessionId: string): Promise<void> {
     await updateAutoOpen(() => api.pauseAutoOpen(sessionId))
   }
@@ -192,9 +199,29 @@ export const useSessionStore = defineStore('session', () => {
     }
     if (event.event === 'job.auto_opened') {
       status.state = 'WAITING_USER'
+      status.pending_job_id = null
       status.next_open_at = null
       status.seconds_remaining = null
       status.reason = 'WAITING_FOR_USER'
+      return
+    }
+    if (event.event === 'job.open_ready') {
+      const jobId = event.data.job_id
+      status.state = 'WAITING_DEVICE'
+      status.pending_job_id = typeof jobId === 'string' ? jobId : null
+      status.next_open_at = null
+      status.seconds_remaining = null
+      status.reason = 'WAITING_FOR_DEVICE_TAP'
+      return
+    }
+    if (event.event === 'session.link_target_changed') {
+      const target = event.data.target
+      if (target === 'host_pc' || target === 'current_device') {
+        status.target = target
+      }
+      status.pending_job_id = null
+      status.state = status.enabled ? 'IDLE' : 'OFF'
+      status.reason = null
       return
     }
     if (event.event === 'session.auto_open_paused') {
@@ -255,6 +282,7 @@ export const useSessionStore = defineStore('session', () => {
     stop,
     reportWarning,
     setAutoOpen,
+    setAutoOpenTarget,
     pauseAutoOpen,
     resumeAutoOpen,
     applyAutoOpenEvent

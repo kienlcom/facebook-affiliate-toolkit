@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { AlertTriangle, ArrowLeft, Download, LoaderCircle, Octagon, RefreshCw } from '@lucide/vue'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { SessionSocket } from '../api/ws'
@@ -24,12 +24,14 @@ const sessionStore = useSessionStore()
 const jobsStore = useJobsStore()
 const logsStore = useLogsStore()
 
+const LINK_TARGET_STORAGE_KEY = 'tds_link_open_target'
 const now = ref(Date.now())
 const socketStatus = ref<'connecting' | 'connected' | 'disconnected'>('connecting')
 const warningOpen = ref(false)
 const noJobsOpen = ref(false)
 const pageLoading = ref(true)
 const summarySyncedAt = ref(Date.now())
+const queuePanel = ref<HTMLElement | null>(null)
 let timer: number | null = null
 let socket: SessionSocket | null = null
 
@@ -41,6 +43,19 @@ const autoOpenStatus = computed(() => sessionStore.summary?.auto_open ?? null)
 const localBrowserMode = computed(
   () => autoOpenStatus.value?.mode === 'local_browser'
 )
+const currentDeviceTarget = computed(
+  () => autoOpenStatus.value?.target === 'current_device'
+)
+const linkOpeningAllowed = computed(() => {
+  const job = jobsStore.current
+  const status = autoOpenStatus.value
+  if (!job) return false
+  if (!localBrowserMode.value) return true
+  if (!currentDeviceTarget.value) return false
+  if (job.state === 'WAITING_USER') return true
+  if (job.state !== 'VALIDATED') return false
+  return !status?.enabled || status.pending_job_id === job.id
+})
 const autoOpenCountdown = computed(() => {
   const status = autoOpenStatus.value
   if (!status) return 0
@@ -87,12 +102,23 @@ const elapsedSeconds = computed(() => {
 })
 const error = computed(() => sessionStore.error ?? jobsStore.error)
 
+watch(
+  () => [jobsStore.current?.id, pageLoading.value] as const,
+  async () => {
+    if (pageLoading.value) return
+    await nextTick()
+    keepSelectedQueueItemVisible()
+  },
+  { flush: 'post' }
+)
+
 onMounted(async () => {
   try {
     if (!accountStore.profiles.length) {
       await accountStore.loadDashboard()
     }
     await refresh()
+    await applyPreferredLinkTarget()
     const shouldFetchInitialBatch = sessionStore.consumeInitialFetch(props.id)
     if (shouldFetchInitialBatch && sessionRunning.value && !jobsStore.hasActiveJobs) {
       await fetchJobs()
@@ -141,9 +167,9 @@ async function fetchJobs(): Promise<void> {
 }
 
 function openWindow(markOpened: boolean): void {
-  if (localBrowserMode.value) return
   const job = jobsStore.current
   if (!job) return
+  if (!linkOpeningAllowed.value) return
   window.open(job.url, '_blank', 'noopener,noreferrer')
   if (markOpened) {
     void jobsStore.markOpened(job.id).then(refresh).catch(() => undefined)
@@ -213,6 +239,36 @@ async function setAutoOpen(enabled: boolean): Promise<void> {
   }
 }
 
+async function setAutoOpenTarget(
+  target: 'host_pc' | 'current_device'
+): Promise<void> {
+  try {
+    await sessionStore.setAutoOpenTarget(props.id, target)
+    window.localStorage.setItem(LINK_TARGET_STORAGE_KEY, target)
+  } catch {
+    return
+  }
+}
+
+async function applyPreferredLinkTarget(): Promise<void> {
+  const status = autoOpenStatus.value
+  if (!status?.available || !sessionRunning.value) return
+  const stored = window.localStorage.getItem(LINK_TARGET_STORAGE_KEY)
+  const target =
+    stored === 'host_pc' || stored === 'current_device'
+      ? stored
+      : isTouchDevice()
+        ? 'current_device'
+        : 'host_pc'
+  if (target === status.target) return
+  await sessionStore.setAutoOpenTarget(props.id, target)
+  window.localStorage.setItem(LINK_TARGET_STORAGE_KEY, target)
+}
+
+function isTouchDevice(): boolean {
+  return navigator.maxTouchPoints > 1 || window.matchMedia('(pointer: coarse)').matches
+}
+
 async function pauseAutoOpen(): Promise<void> {
   try {
     await sessionStore.pauseAutoOpen(props.id)
@@ -243,11 +299,37 @@ function handleEvent(event: SessionEvent): void {
   logsStore.add(event)
   sessionStore.applyAutoOpenEvent(event)
   if (
+    event.event === 'job.auto_opened' ||
+    event.event === 'job.open_ready' ||
+    (
+      event.event === 'job.state_changed' &&
+      ['OPENING', 'OPENED', 'WAITING_USER', 'USER_CONFIRMED', 'CLAIMING'].includes(
+        String(event.data.state)
+      )
+    )
+  ) {
+    const jobId = event.data.job_id
+    if (typeof jobId === 'string') jobsStore.focusJob(jobId)
+  }
+  if (
     event.event.startsWith('job.') ||
     event.event.startsWith('session.') ||
     event.event === 'account.warning'
   ) {
     void refresh().catch(() => undefined)
+  }
+}
+
+function keepSelectedQueueItemVisible(): void {
+  const panel = queuePanel.value
+  const selected = panel?.querySelector<HTMLElement>('.queue-item.selected')
+  if (!panel || !selected) return
+  const panelRect = panel.getBoundingClientRect()
+  const selectedRect = selected.getBoundingClientRect()
+  if (selectedRect.top < panelRect.top) {
+    panel.scrollTop -= panelRect.top - selectedRect.top + 8
+  } else if (selectedRect.bottom > panelRect.bottom) {
+    panel.scrollTop += selectedRect.bottom - panelRect.bottom + 8
   }
 }
 </script>
@@ -335,6 +417,7 @@ function handleEvent(event: SessionEvent): void {
         @toggle="setAutoOpen"
         @pause="pauseAutoOpen"
         @resume="resumeAutoOpen"
+        @target="setAutoOpenTarget"
       />
 
       <SessionStats
@@ -344,7 +427,7 @@ function handleEvent(event: SessionEvent): void {
       />
 
       <div class="session-workspace">
-        <aside class="panel queue-panel" aria-label="Danh sách nhiệm vụ">
+        <aside ref="queuePanel" class="panel queue-panel" aria-label="Danh sách nhiệm vụ">
           <div class="panel-heading compact-heading">
             <h2>Queue</h2>
             <button class="icon-button" type="button" title="Đồng bộ phiên" @click="refresh">
@@ -356,11 +439,13 @@ function handleEvent(event: SessionEvent): void {
             :key="job.id"
             class="queue-item"
             :class="{ selected: jobsStore.current?.id === job.id }"
+            :data-job-id="job.id"
             type="button"
             @click="jobsStore.selectedId = job.id"
           >
             <span>{{ job.action_label ?? 'Page' }}</span>
-            <small>{{ job.state.replaceAll('_', ' ') }}</small>
+            <small class="queue-job-id"># {{ job.external_id }}</small>
+            <small class="queue-job-state">{{ job.state.replaceAll('_', ' ') }}</small>
           </button>
           <p v-if="!jobsStore.jobs.length" class="queue-empty">Queue trống</p>
         </aside>
@@ -371,7 +456,7 @@ function handleEvent(event: SessionEvent): void {
           :countdown="countdown"
           :busy="jobsStore.busy"
           :session-running="sessionRunning"
-          :manual-link-opening="!localBrowserMode"
+          :manual-link-opening="linkOpeningAllowed"
           @open="openWindow(true)"
           @reopen="openWindow(false)"
           @complete="complete"

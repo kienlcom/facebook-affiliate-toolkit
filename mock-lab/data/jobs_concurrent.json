@@ -1,0 +1,566 @@
+{
+  "settlement_threshold": 9999,
+  "settlement_wait_seconds": 0,
+  "jobs": [
+    {
+      "external_id": "mock-conc-001",
+      "target_id": "page-conc-001",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-001?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-002",
+      "target_id": "page-conc-002",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-002?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-003",
+      "target_id": "page-conc-003",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-003?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-004",
+      "target_id": "page-conc-004",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-004?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-005",
+      "target_id": "page-conc-005",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-005?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-006",
+      "target_id": "page-conc-006",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-006?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-007",
+      "target_id": "page-conc-007",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-007?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-008",
+      "target_id": "page-conc-008",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-008?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-009",
+      "target_id": "page-conc-009",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-009?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-010",
+      "target_id": "page-conc-010",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-010?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-011",
+      "target_id": "page-conc-011",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-011?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-012",
+      "target_id": "page-conc-012",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-012?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-013",
+      "target_id": "page-conc-013",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-013?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-014",
+      "target_id": "page-conc-014",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-014?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-015",
+      "target_id": "page-conc-015",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-015?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-016",
+      "target_id": "page-conc-016",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-016?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-017",
+      "target_id": "page-conc-017",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-017?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-018",
+      "target_id": "page-conc-018",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-018?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-019",
+      "target_id": "page-conc-019",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-019?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-020",
+      "target_id": "page-conc-020",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-020?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-021",
+      "target_id": "page-conc-021",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-021?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-022",
+      "target_id": "page-conc-022",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-022?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-023",
+      "target_id": "page-conc-023",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-023?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-024",
+      "target_id": "page-conc-024",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-024?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-025",
+      "target_id": "page-conc-025",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-025?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-026",
+      "target_id": "page-conc-026",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-026?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-027",
+      "target_id": "page-conc-027",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-027?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-028",
+      "target_id": "page-conc-028",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-028?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-029",
+      "target_id": "page-conc-029",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-029?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-030",
+      "target_id": "page-conc-030",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-030?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-031",
+      "target_id": "page-conc-031",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-031?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-032",
+      "target_id": "page-conc-032",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-032?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-033",
+      "target_id": "page-conc-033",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-033?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-034",
+      "target_id": "page-conc-034",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-034?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-035",
+      "target_id": "page-conc-035",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-035?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-036",
+      "target_id": "page-conc-036",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-036?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-037",
+      "target_id": "page-conc-037",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-037?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-038",
+      "target_id": "page-conc-038",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-038?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-039",
+      "target_id": "page-conc-039",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-039?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-040",
+      "target_id": "page-conc-040",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-040?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-041",
+      "target_id": "page-conc-041",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-041?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-042",
+      "target_id": "page-conc-042",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-042?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-043",
+      "target_id": "page-conc-043",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-043?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-044",
+      "target_id": "page-conc-044",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-044?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-045",
+      "target_id": "page-conc-045",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-045?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-046",
+      "target_id": "page-conc-046",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-046?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-047",
+      "target_id": "page-conc-047",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-047?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-048",
+      "target_id": "page-conc-048",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-048?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-049",
+      "target_id": "page-conc-049",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-049?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-050",
+      "target_id": "page-conc-050",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-050?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-051",
+      "target_id": "page-conc-051",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-051?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-052",
+      "target_id": "page-conc-052",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-052?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-053",
+      "target_id": "page-conc-053",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-053?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-054",
+      "target_id": "page-conc-054",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-054?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-055",
+      "target_id": "page-conc-055",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-055?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-056",
+      "target_id": "page-conc-056",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-056?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-057",
+      "target_id": "page-conc-057",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-057?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-058",
+      "target_id": "page-conc-058",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-058?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-059",
+      "target_id": "page-conc-059",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-059?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-060",
+      "target_id": "page-conc-060",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-060?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-061",
+      "target_id": "page-conc-061",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-061?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-062",
+      "target_id": "page-conc-062",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-062?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-063",
+      "target_id": "page-conc-063",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-063?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-064",
+      "target_id": "page-conc-064",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-064?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-065",
+      "target_id": "page-conc-065",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-065?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-066",
+      "target_id": "page-conc-066",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-066?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-067",
+      "target_id": "page-conc-067",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-067?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-068",
+      "target_id": "page-conc-068",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-068?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-069",
+      "target_id": "page-conc-069",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-069?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    },
+    {
+      "external_id": "mock-conc-070",
+      "target_id": "page-conc-070",
+      "action": "FOLLOW",
+      "path": "/profiles/page-conc-070?scenario=success",
+      "points": 100,
+      "minimum_claim_wait_seconds": 0
+    }
+  ]
+}

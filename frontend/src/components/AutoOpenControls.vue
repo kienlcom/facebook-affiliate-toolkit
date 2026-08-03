@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Clock3, Pause, Play, Power } from '@lucide/vue'
+import { Clock3, Monitor, Pause, Play, Power, Tablet } from '@lucide/vue'
 import { computed } from 'vue'
 
 import type { AutoOpenStatus } from '../api/types'
@@ -15,6 +15,7 @@ defineEmits<{
   toggle: [enabled: boolean]
   pause: []
   resume: []
+  target: [target: AutoOpenStatus['target']]
 }>()
 
 const stateLabel = computed(() => {
@@ -22,6 +23,7 @@ const stateLabel = computed(() => {
   if (props.status.paused) return 'Tạm dừng'
   if (props.status.state === 'COUNTDOWN') return `Mở job kế sau ${props.countdown} giây`
   if (props.status.state === 'OPENING') return 'Đang mở trình duyệt'
+  if (props.status.state === 'WAITING_DEVICE') return 'Chạm Mở Facebook trên thiết bị này'
   if (props.status.state === 'WAITING_USER') return 'Chờ bạn xử lý Facebook'
   if (props.status.reason === 'QUEUE_EMPTY') return 'Đã hết queue'
   return 'Đang chờ job'
@@ -44,9 +46,30 @@ const stateLabel = computed(() => {
       <span class="toggle-track" aria-hidden="true"><span /></span>
       <span>
         <strong>Tự động mở link</strong>
-        <small>Local browser</small>
+        <small>Điều phối tuần tự</small>
       </span>
     </label>
+
+    <div class="link-target-control" aria-label="Thiết bị mở link">
+      <button
+        type="button"
+        :class="{ active: status.target === 'current_device' }"
+        :disabled="busy || !sessionRunning"
+        title="Mở bằng trình duyệt trên thiết bị đang dùng"
+        @click="$emit('target', 'current_device')"
+      >
+        <Tablet :size="15" /> Thiết bị này
+      </button>
+      <button
+        type="button"
+        :class="{ active: status.target === 'host_pc' }"
+        :disabled="busy || !sessionRunning"
+        title="Tự động mở bằng trình duyệt trên máy PC"
+        @click="$emit('target', 'host_pc')"
+      >
+        <Monitor :size="15" /> PC
+      </button>
+    </div>
 
     <div class="auto-open-state" role="status" aria-live="polite">
       <Clock3 :size="16" />

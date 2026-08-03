@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mock profile</title>
+    <link rel="stylesheet" href="/static/profile.css" />
+    <script>
+      window.__MOCK__ = /*__MOCK_CONFIG__*/null;
+    </script>
+  </head>
+  <body>
+    <main class="profile">
+      <header class="profile__header">
+        <div class="profile__avatar" aria-hidden="true"></div>
+        <div>
+          <h1 class="profile__name" data-testid="profile-name"></h1>
+          <p class="profile__meta">Trang mock — không kết nối Facebook thật</p>
+        </div>
+      </header>
+
+      <section class="profile__actions" data-testid="action-area"></section>
+
+      <section class="profile__panels" data-testid="panel-area"></section>
+
+      <footer class="profile__footer">
+        <dl>
+          <dt>scenario</dt>
+          <dd data-testid="scenario-label"></dd>
+        </dl>
+      </footer>
+    </main>
+
+    <script src="/static/profile.js"></script>
+  </body>
+</html>

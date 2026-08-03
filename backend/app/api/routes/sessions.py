@@ -18,6 +18,7 @@ from app.schemas.session import (
     AutoOpenRequest,
     AutoOpenStatusResponse,
     CreateSessionRequest,
+    LinkOpenTargetRequest,
     SessionResponse,
     SessionSummaryResponse,
     StopSessionRequest,
@@ -85,6 +86,21 @@ async def set_auto_open(
 ) -> AutoOpenStatusResponse:
     return AutoOpenStatusResponse.model_validate(
         await coordinator.set_enabled(session_id, payload.enabled),
+        from_attributes=True,
+    )
+
+
+@router.post(
+    "/{session_id}/auto-open/target",
+    response_model=AutoOpenStatusResponse,
+)
+async def set_auto_open_target(
+    session_id: UUID,
+    payload: LinkOpenTargetRequest,
+    coordinator: AutoOpenCoordinator = Depends(get_auto_open_coordinator),
+) -> AutoOpenStatusResponse:
+    return AutoOpenStatusResponse.model_validate(
+        await coordinator.set_target(session_id, payload.target),
         from_attributes=True,
     )
 

@@ -19,7 +19,7 @@ from app.api.routes.profiles import router as profiles_router
 from app.api.routes.sessions import router as sessions_router
 from app.api.routes.ws import router as ws_router
 from app.claims.service import ClaimService
-from app.config.settings import get_settings
+from app.config.settings import Settings, get_settings
 from app.core.errors import AppError
 from app.core.logging import configure_logging
 from app.core.redaction import redact
@@ -27,7 +27,11 @@ from app.core.security.token_store import LocalEnvTokenStore
 from app.db.session import build_sessionmaker
 from app.jobs.service import JobsService
 from app.platforms.facebook.auto_advance import AutoOpenCoordinator
-from app.platforms.facebook.opener import LocalBrowserLinkOpener
+from app.platforms.facebook.opener import (
+    HostCompanionLinkOpener,
+    LinkOpener,
+    LocalBrowserLinkOpener,
+)
 from app.providers.tds.client import TDSClient
 from app.providers.tds.error_mapping import map_provider_error
 from app.providers.tds.errors import TDSProviderError
@@ -36,6 +40,16 @@ from app.sessions.service import SessionService
 from app.ws.manager import WebSocketManager
 
 logger = logging.getLogger(__name__)
+
+
+def _build_link_opener(settings: Settings) -> LinkOpener:
+    if settings.LINK_OPENER_TRANSPORT == "host_companion":
+        return HostCompanionLinkOpener(
+            endpoint=settings.HOST_LINK_OPENER_URL,
+            token=settings.HOST_LINK_OPENER_TOKEN.get_secret_value(),
+            timeout_seconds=settings.HOST_LINK_OPENER_TIMEOUT_SECONDS,
+        )
+    return LocalBrowserLinkOpener()
 
 
 def _error_response(
@@ -70,7 +84,7 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncIterator[None]:
     auto_open_coordinator = AutoOpenCoordinator(
         settings=settings,
         session_factory=session_factory,
-        opener=LocalBrowserLinkOpener(),
+        opener=_build_link_opener(settings),
         ws_manager=ws_manager,
     )
     token_store = LocalEnvTokenStore(settings)

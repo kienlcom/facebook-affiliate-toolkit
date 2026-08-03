@@ -1,0 +1,122 @@
+:root {
+  --bg: #f4f5f7;
+  --card: #ffffff;
+  --ink: #1c1e21;
+  --muted: #65676b;
+  --accent: #1877f2;
+  --line: #dddfe2;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 32px 16px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+.profile {
+  max-width: 640px;
+  margin: 0 auto;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 24px;
+}
+
+.profile__header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 16px;
+}
+
+.profile__avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #c9d2dc, #9fb0c2);
+  flex: 0 0 auto;
+}
+
+.profile__name {
+  margin: 0;
+  font-size: 20px;
+}
+
+.profile__meta {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.profile__actions {
+  padding: 20px 0;
+  min-height: 60px;
+}
+
+.follow {
+  appearance: none;
+  border: 0;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.follow[data-following="true"] {
+  background: #e4e6eb;
+  color: var(--ink);
+}
+
+.follow:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: #fffbe6;
+}
+
+.panel h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.panel p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.profile__footer {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.profile__footer dl {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+}
+
+.profile__footer dt {
+  font-weight: 600;
+}
+
+.profile__footer dd {
+  margin: 0;
+}

@@ -50,21 +50,29 @@ class AutoOpenRuntimeState(StrEnum):
     IDLE = "IDLE"
     COUNTDOWN = "COUNTDOWN"
     OPENING = "OPENING"
+    WAITING_DEVICE = "WAITING_DEVICE"
     WAITING_USER = "WAITING_USER"
     PAUSED = "PAUSED"
     HALTED = "HALTED"
+
+
+class LinkOpenTarget(StrEnum):
+    HOST_PC = "host_pc"
+    CURRENT_DEVICE = "current_device"
 
 
 @dataclass(frozen=True, slots=True)
 class AutoOpenStatus:
     available: bool
     mode: str
+    target: LinkOpenTarget
     enabled: bool
     paused: bool
     state: AutoOpenRuntimeState
     interval_seconds: int
     next_open_at: datetime | None
     seconds_remaining: int | None
+    pending_job_id: UUID | None
     reason: str | None
 
 
@@ -72,8 +80,10 @@ class AutoOpenStatus:
 class _Runtime:
     enabled: bool = False
     paused: bool = False
+    target: LinkOpenTarget = LinkOpenTarget.HOST_PC
     state: AutoOpenRuntimeState = AutoOpenRuntimeState.OFF
     next_open_at: datetime | None = None
+    pending_job_id: UUID | None = None
     reason: str | None = None
     task: asyncio.Task[None] | None = None
 
@@ -120,12 +130,14 @@ class AutoOpenCoordinator:
             return AutoOpenStatus(
                 available=self.available,
                 mode=self._settings.LINK_OPENER_MODE,
+                target=LinkOpenTarget.HOST_PC,
                 enabled=False,
                 paused=False,
                 state=AutoOpenRuntimeState.OFF,
                 interval_seconds=self._settings.AUTO_OPEN_INTERVAL_SECONDS,
                 next_open_at=None,
                 seconds_remaining=None,
+                pending_job_id=None,
                 reason=None,
             )
         seconds_remaining = (
@@ -139,12 +151,14 @@ class AutoOpenCoordinator:
         return AutoOpenStatus(
             available=self.available,
             mode=self._settings.LINK_OPENER_MODE,
+            target=runtime.target,
             enabled=runtime.enabled,
             paused=runtime.paused,
             state=runtime.state,
             interval_seconds=self._settings.AUTO_OPEN_INTERVAL_SECONDS,
             next_open_at=runtime.next_open_at,
             seconds_remaining=seconds_remaining,
+            pending_job_id=runtime.pending_job_id,
             reason=runtime.reason,
         )
 
@@ -153,6 +167,8 @@ class AutoOpenCoordinator:
             runtime = self._runtimes.setdefault(session_id, _Runtime())
             runtime.enabled = self.available
             runtime.paused = False
+            runtime.target = LinkOpenTarget.HOST_PC
+            runtime.pending_job_id = None
             runtime.state = (
                 AutoOpenRuntimeState.IDLE
                 if runtime.enabled
@@ -176,6 +192,7 @@ class AutoOpenCoordinator:
             runtime.enabled = enabled
             runtime.paused = False
             runtime.next_open_at = None
+            runtime.pending_job_id = None
             runtime.state = (
                 AutoOpenRuntimeState.IDLE
                 if enabled
@@ -184,6 +201,38 @@ class AutoOpenCoordinator:
             runtime.reason = None
         await self._publish_enabled(session_id, runtime)
         if enabled:
+            await self._schedule(session_id, delay_seconds=0)
+        return self.status(session_id)
+
+    async def set_target(
+        self,
+        session_id: UUID,
+        target: LinkOpenTarget,
+    ) -> AutoOpenStatus:
+        await self._ensure_running_session(session_id)
+        if not self.available:
+            raise ConflictError(
+                "AUTO_OPEN_NOT_AVAILABLE",
+                "Link target selection requires local_browser mode",
+            )
+        await self._cancel_task(session_id)
+        async with self._runtime_lock:
+            runtime = self._runtimes.setdefault(session_id, _Runtime())
+            runtime.target = target
+            runtime.pending_job_id = None
+            runtime.next_open_at = None
+            runtime.state = (
+                AutoOpenRuntimeState.IDLE
+                if runtime.enabled and not runtime.paused
+                else runtime.state
+            )
+            runtime.reason = None
+        await self._ws_manager.publish(
+            session_id,
+            "session.link_target_changed",
+            {"target": target.value},
+        )
+        if runtime.enabled and not runtime.paused:
             await self._schedule(session_id, delay_seconds=0)
         return self.status(session_id)
 
@@ -223,12 +272,27 @@ class AutoOpenCoordinator:
         if runtime is None:
             await self.register_session(session_id)
             runtime = self._runtimes.get(session_id)
-        if runtime is not None and runtime.enabled and not runtime.paused:
+        if (
+            runtime is not None
+            and runtime.enabled
+            and not runtime.paused
+            and runtime.pending_job_id is None
+        ):
             await self._schedule(session_id, delay_seconds=0)
+
+    async def job_opened(self, session_id: UUID, job_id: UUID) -> None:
+        runtime = self._runtimes.get(session_id)
+        if runtime is None or not runtime.enabled:
+            return
+        async with self._runtime_lock:
+            runtime.pending_job_id = None
+            runtime.state = AutoOpenRuntimeState.WAITING_USER
+            runtime.reason = "WAITING_FOR_USER"
 
     async def job_resolved(self, session_id: UUID) -> None:
         runtime = self._runtimes.get(session_id)
         if runtime is not None and runtime.enabled and not runtime.paused:
+            runtime.pending_job_id = None
             await self._schedule(
                 session_id,
                 delay_seconds=self._settings.AUTO_OPEN_INTERVAL_SECONDS,
@@ -248,6 +312,7 @@ class AutoOpenCoordinator:
             runtime.paused = False
             runtime.state = AutoOpenRuntimeState.OFF
             runtime.next_open_at = None
+            runtime.pending_job_id = None
             runtime.reason = reason
         await self._publish_enabled(session_id, runtime)
 
@@ -310,7 +375,12 @@ class AutoOpenCoordinator:
                         runtime.state = AutoOpenRuntimeState.IDLE
 
     async def _open_next(self, session_id: UUID) -> None:
-        decision = await self._decide_next(session_id)
+        runtime = self._runtimes.get(session_id)
+        target = runtime.target if runtime is not None else LinkOpenTarget.HOST_PC
+        decision = await self._decide_next(
+            session_id,
+            reserve=target == LinkOpenTarget.HOST_PC,
+        )
         if decision.halt:
             await self._pause_current_task(session_id, decision.reason or "HALTED")
             return
@@ -319,6 +389,24 @@ class AutoOpenCoordinator:
                 session_id,
                 state=decision.state,
                 reason=decision.reason,
+            )
+            return
+
+        if target == LinkOpenTarget.CURRENT_DEVICE:
+            async with self._runtime_lock:
+                runtime = self._runtimes.setdefault(session_id, _Runtime())
+                runtime.state = AutoOpenRuntimeState.WAITING_DEVICE
+                runtime.pending_job_id = decision.job_id
+                runtime.reason = "WAITING_FOR_DEVICE_TAP"
+                runtime.next_open_at = None
+            await self._ws_manager.publish(
+                session_id,
+                "job.open_ready",
+                {
+                    "job_id": str(decision.job_id),
+                    "url": decision.url,
+                    "target": LinkOpenTarget.CURRENT_DEVICE.value,
+                },
             )
             return
 
@@ -397,7 +485,12 @@ class AutoOpenCoordinator:
             return
         await self._pause_current_task(session_id, "BROWSER_OPEN_FAILED")
 
-    async def _decide_next(self, session_id: UUID) -> _OpenDecision:
+    async def _decide_next(
+        self,
+        session_id: UUID,
+        *,
+        reserve: bool,
+    ) -> _OpenDecision:
         now = datetime.now(UTC)
         async with self._session_factory() as db:
             session = await db.scalar(
@@ -468,12 +561,13 @@ class AutoOpenCoordinator:
                 await db.commit()
                 return _OpenDecision(reason="URL_INVALID", halt=True)
 
-            job.state = transition(
-                JobState(job.state),
-                JobState.VALIDATED,
-                JobState.OPENING,
-            )
-            await db.commit()
+            if reserve:
+                job.state = transition(
+                    JobState(job.state),
+                    JobState.VALIDATED,
+                    JobState.OPENING,
+                )
+                await db.commit()
             return _OpenDecision(job_id=job.id, url=url)
 
     async def _finalize_open(
@@ -530,6 +624,7 @@ class AutoOpenCoordinator:
         async with self._runtime_lock:
             runtime = self._runtimes.setdefault(session_id, _Runtime())
             runtime.paused = True
+            runtime.pending_job_id = None
             runtime.state = (
                 AutoOpenRuntimeState.HALTED
                 if halted
@@ -547,6 +642,7 @@ class AutoOpenCoordinator:
         async with self._runtime_lock:
             runtime = self._runtimes.setdefault(session_id, _Runtime())
             runtime.paused = True
+            runtime.pending_job_id = None
             runtime.state = AutoOpenRuntimeState.HALTED
             runtime.next_open_at = None
             runtime.reason = reason
@@ -638,5 +734,6 @@ class AutoOpenCoordinator:
                 "enabled": runtime.enabled,
                 "paused": runtime.paused,
                 "mode": self._settings.LINK_OPENER_MODE,
+                "target": runtime.target.value,
             },
         )

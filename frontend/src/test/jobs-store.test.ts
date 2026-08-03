@@ -65,6 +65,54 @@ describe('jobs store', () => {
     expect(store.hasActiveJobs).toBe(true)
   })
 
+  it('selects the first fetched job instead of the last batch item', async () => {
+    apiMock.fetchJobs.mockResolvedValue({
+      jobs: [
+        { ...waitingJob, id: 'job-1', state: 'VALIDATED' },
+        { ...waitingJob, id: 'job-2', state: 'VALIDATED' },
+        { ...waitingJob, id: 'job-3', state: 'VALIDATED' }
+      ],
+      duplicates_ignored: 0
+    })
+    const store = useJobsStore()
+
+    await store.fetch('session-id')
+
+    expect(store.selectedId).toBe('job-1')
+    expect(store.current?.id).toBe('job-1')
+  })
+
+  it('focuses the job opened by auto-advance after a batch refresh', () => {
+    const store = useJobsStore()
+    store.setJobs([
+      { ...waitingJob, id: 'job-1', state: 'VALIDATED' },
+      { ...waitingJob, id: 'job-2', state: 'VALIDATED' },
+      { ...waitingJob, id: 'job-3', state: 'VALIDATED' }
+    ])
+    store.selectedId = 'job-3'
+
+    store.setJobs([
+      { ...waitingJob, id: 'job-1', state: 'WAITING_USER' },
+      { ...waitingJob, id: 'job-2', state: 'VALIDATED' },
+      { ...waitingJob, id: 'job-3', state: 'VALIDATED' }
+    ])
+
+    expect(store.selectedId).toBe('job-1')
+    expect(store.current?.id).toBe('job-1')
+  })
+
+  it('keeps the in-progress job focused over manual validated selection', () => {
+    const store = useJobsStore()
+    store.setJobs([
+      { ...waitingJob, id: 'opened-job', state: 'OPENING' },
+      { ...waitingJob, id: 'queued-job', state: 'VALIDATED' }
+    ])
+
+    store.selectedId = 'queued-job'
+
+    expect(store.current?.id).toBe('opened-job')
+  })
+
   it('confirms before claim', async () => {
     const store = useJobsStore()
     store.setJobs([{ ...waitingJob }])

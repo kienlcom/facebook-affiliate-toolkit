@@ -1,0 +1,10 @@
+.env
+node_modules
+dist
+coverage
+playwright-report
+test-results
+tests
+src/test
+playwright.config.ts
+vitest.config.ts

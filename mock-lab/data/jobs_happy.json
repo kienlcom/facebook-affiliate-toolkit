@@ -1,0 +1,24 @@
+{
+  "settlement_threshold": 2,
+  "settlement_wait_seconds": 3,
+  "jobs": [
+    {
+      "external_id": "mock-follow-001",
+      "target_id": "page-anna",
+      "action": "FOLLOW",
+      "state": "FETCHED",
+      "path": "/profiles/page-anna?scenario=success",
+      "points": 600,
+      "minimum_claim_wait_seconds": 3
+    },
+    {
+      "external_id": "mock-follow-002",
+      "target_id": "page-ben",
+      "action": "FOLLOW",
+      "state": "FETCHED",
+      "path": "/profiles/page-ben?scenario=already_following",
+      "points": 600,
+      "minimum_claim_wait_seconds": 3
+    }
+  ]
+}

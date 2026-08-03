@@ -16,6 +16,7 @@ const apiMock = vi.hoisted(() => ({
   fetchJobs: vi.fn(),
   stopSession: vi.fn(),
   setAutoOpen: vi.fn(),
+  setAutoOpenTarget: vi.fn(),
   pauseAutoOpen: vi.fn(),
   resumeAutoOpen: vi.fn()
 }))
@@ -53,6 +54,7 @@ describe('SessionView', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    window.localStorage.clear()
     const pinia = createPinia()
     setActivePinia(pinia)
     const accountStore = useAccountStore()
@@ -127,36 +129,55 @@ describe('SessionView', () => {
     apiMock.setAutoOpen.mockResolvedValue({
       available: true,
       mode: 'local_browser',
+      target: 'host_pc',
       enabled: false,
       paused: false,
       state: 'OFF',
       interval_seconds: 20,
       next_open_at: null,
       seconds_remaining: null,
+      pending_job_id: null,
       reason: null
     })
     apiMock.pauseAutoOpen.mockResolvedValue({
       available: true,
       mode: 'local_browser',
+      target: 'host_pc',
       enabled: true,
       paused: true,
       state: 'PAUSED',
       interval_seconds: 20,
       next_open_at: null,
       seconds_remaining: null,
+      pending_job_id: null,
       reason: 'USER_PAUSED'
     })
     apiMock.resumeAutoOpen.mockResolvedValue({
       available: true,
       mode: 'local_browser',
+      target: 'host_pc',
       enabled: true,
       paused: false,
       state: 'IDLE',
       interval_seconds: 20,
       next_open_at: null,
       seconds_remaining: null,
+      pending_job_id: null,
       reason: null
     })
+    apiMock.setAutoOpenTarget.mockImplementation(async (_sessionId, target) => ({
+      available: true,
+      mode: 'local_browser',
+      target,
+      enabled: true,
+      paused: false,
+      state: target === 'current_device' ? 'WAITING_DEVICE' : 'IDLE',
+      interval_seconds: 20,
+      next_open_at: null,
+      seconds_remaining: null,
+      pending_job_id: target === 'current_device' ? 'job-id' : null,
+      reason: target === 'current_device' ? 'WAITING_FOR_DEVICE_TAP' : null
+    }))
   })
 
   it('opens Facebook with isolation flags and records the explicit open command', async () => {
@@ -260,12 +281,14 @@ describe('SessionView', () => {
     summary.auto_open = {
       available: true,
       mode: 'local_browser',
+      target: 'host_pc',
       enabled: true,
       paused: false,
       state: 'IDLE',
       interval_seconds: 20,
       next_open_at: null,
       seconds_remaining: null,
+      pending_job_id: null,
       reason: null
     }
     const pinia = createPinia()
@@ -293,6 +316,51 @@ describe('SessionView', () => {
 
     expect(apiMock.pauseAutoOpen).toHaveBeenCalledWith('session-id')
     expect(openSpy).not.toHaveBeenCalled()
+  })
+
+  it('opens a backend-selected job with one tap on the current device', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null)
+    summary.auto_open = {
+      available: true,
+      mode: 'local_browser',
+      target: 'current_device',
+      enabled: true,
+      paused: false,
+      state: 'WAITING_DEVICE',
+      interval_seconds: 20,
+      next_open_at: null,
+      seconds_remaining: null,
+      pending_job_id: 'job-id',
+      reason: 'WAITING_FOR_DEVICE_TAP'
+    }
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAccountStore().profiles = [
+      {
+        key: 'facebook_page',
+        display_name: 'Facebook Page Follow',
+        provider: 'tds',
+        platform: 'facebook',
+        minimum_claim_wait_seconds: 3,
+        settlement_threshold: 5
+      }
+    ]
+    const wrapper = mount(SessionView, {
+      props: { id: 'session-id' },
+      global: { plugins: [pinia] }
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Thiết bị này')
+    await wrapper.get('.button-primary').trigger('click')
+    await flushPromises()
+
+    expect(openSpy).toHaveBeenCalledWith(
+      'https://www.facebook.com/123',
+      '_blank',
+      'noopener,noreferrer'
+    )
+    expect(apiMock.markOpened).toHaveBeenCalledWith('job-id')
   })
 
   it('fetches one initial batch for a newly created session only', async () => {
@@ -330,6 +398,52 @@ describe('SessionView', () => {
 
     expect(apiMock.fetchJobs).toHaveBeenCalledTimes(1)
     resumedMount.unmount()
+  })
+
+  it('applies the device preference before the initial job fetch', async () => {
+    summary.jobs = []
+    summary.counters.fetched = 0
+    summary.auto_open = {
+      available: true,
+      mode: 'local_browser',
+      target: 'host_pc',
+      enabled: true,
+      paused: false,
+      state: 'IDLE',
+      interval_seconds: 20,
+      next_open_at: null,
+      seconds_remaining: null,
+      pending_job_id: null,
+      reason: null
+    }
+    window.localStorage.setItem('tds_link_open_target', 'current_device')
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAccountStore().profiles = [
+      {
+        key: 'facebook_page',
+        display_name: 'Facebook Page Follow',
+        provider: 'tds',
+        platform: 'facebook',
+        minimum_claim_wait_seconds: 3,
+        settlement_threshold: 5
+      }
+    ]
+    useSessionStore().pendingInitialFetchSessionId = 'session-id'
+
+    mount(SessionView, {
+      props: { id: 'session-id' },
+      global: { plugins: [pinia] }
+    })
+    await flushPromises()
+
+    expect(apiMock.setAutoOpenTarget).toHaveBeenCalledWith(
+      'session-id',
+      'current_device'
+    )
+    expect(apiMock.setAutoOpenTarget.mock.invocationCallOrder[0]).toBeLessThan(
+      apiMock.fetchJobs.mock.invocationCallOrder[0]
+    )
   })
 
   it('shows no-jobs dialog and locks fetch when the user continues', async () => {

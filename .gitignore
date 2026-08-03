@@ -19,4 +19,5 @@ frontend/playwright-report/
 frontend/test-results/
 
 logs/
+.stable/
 .DS_Store

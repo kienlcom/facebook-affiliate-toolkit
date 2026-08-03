@@ -46,3 +46,17 @@ LINK_OPENER_MODE=local_browser
 AUTO_OPEN_ENABLED=true
 AUTO_OPEN_INTERVAL_SECONDS=20
 ```
+
+## Docker stable
+
+Ban Docker stable khong bind-mount source, nen co the chay song song trong khi
+tiep tuc phat trien local. Backend container dung Host Link Opener Companion co
+token rieng de mo URL da validate tren trinh duyet Windows:
+
+```powershell
+.\scripts\stable-build.cmd
+```
+
+Truy cap `http://localhost:8080`. Auto-open van giu manual Facebook interaction,
+manual confirmation va manual claim. Xem runbook tai
+[docs/DOCKER_STABLE.md](docs/DOCKER_STABLE.md).

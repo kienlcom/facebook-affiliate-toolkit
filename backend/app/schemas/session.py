@@ -6,6 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.platforms.facebook.auto_advance import LinkOpenTarget
 from app.schemas.job import JobResponse
 
 
@@ -46,15 +47,21 @@ class AutoOpenRequest(BaseModel):
     enabled: bool
 
 
+class LinkOpenTargetRequest(BaseModel):
+    target: LinkOpenTarget
+
+
 class AutoOpenStatusResponse(BaseModel):
     available: bool
     mode: Literal["frontend_manual", "local_browser"]
+    target: LinkOpenTarget
     enabled: bool
     paused: bool
     state: str
     interval_seconds: int
     next_open_at: datetime | None
     seconds_remaining: int | None
+    pending_job_id: UUID | None
     reason: str | None
 
 

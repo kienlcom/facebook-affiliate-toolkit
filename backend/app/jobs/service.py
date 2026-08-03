@@ -179,6 +179,8 @@ class JobsService:
             await db.commit()
 
         await self._publish_state(job)
+        if self._auto_open_coordinator is not None:
+            await self._auto_open_coordinator.job_opened(job.session_id, job.id)
         return job
 
     async def confirm(self, job_id: UUID) -> Job:

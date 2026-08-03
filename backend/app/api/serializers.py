@@ -69,12 +69,14 @@ def session_summary_response(
         auto_open=AutoOpenStatusResponse(
             available=auto_open.available,
             mode=auto_open.mode,
+            target=auto_open.target,
             enabled=auto_open.enabled,
             paused=auto_open.paused,
             state=auto_open.state,
             interval_seconds=auto_open.interval_seconds,
             next_open_at=auto_open.next_open_at,
             seconds_remaining=auto_open.seconds_remaining,
+            pending_job_id=auto_open.pending_job_id,
             reason=auto_open.reason,
         ),
     )

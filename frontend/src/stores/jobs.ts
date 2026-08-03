@@ -4,12 +4,17 @@ import { defineStore } from 'pinia'
 import { api, normalizeApiError } from '../api/http'
 import type { ClaimResponse, Job } from '../api/types'
 
-const activePriority = [
+const focusPriority = [
   'WAITING_USER',
   'USER_CONFIRMED',
   'CLAIM_PENDING',
   'CLAIMING',
   'RETRY_WAIT',
+  'OPENING',
+  'OPENED'
+]
+const activePriority = [
+  ...focusPriority,
   'VALIDATED'
 ]
 const activeStates = new Set([
@@ -32,17 +37,15 @@ export const useJobsStore = defineStore('jobs', () => {
   const error = ref<string | null>(null)
 
   const current = computed(() => {
+    const focused = firstByStatePriority(jobs.value, focusPriority)
+    if (focused) {
+      return focused
+    }
     const selected = jobs.value.find((job) => job.id === selectedId.value)
     if (selected && activePriority.includes(selected.state)) {
       return selected
     }
-    for (const state of activePriority) {
-      const match = jobs.value.find((job) => job.state === state)
-      if (match) {
-        return match
-      }
-    }
-    return selected ?? jobs.value[0] ?? null
+    return firstByStatePriority(jobs.value, activePriority) ?? selected ?? jobs.value[0] ?? null
   })
   const hasActiveJobs = computed(() => jobs.value.some((job) => activeStates.has(job.state)))
 
@@ -54,19 +57,30 @@ export const useJobsStore = defineStore('jobs', () => {
     ) {
       claimResult.value = null
     }
-    if (!selectedId.value || !nextJobs.some((job) => job.id === selectedId.value)) {
+    const focused = firstByStatePriority(nextJobs, focusPriority)
+    if (focused) {
+      selectedId.value = focused.id
+    } else if (!selectedId.value || !nextJobs.some((job) => job.id === selectedId.value)) {
       selectedId.value = current.value?.id ?? nextJobs[0]?.id ?? null
     }
   }
 
-  function updateJob(updated: Job): void {
+  function updateJob(updated: Job, select = true): void {
     const index = jobs.value.findIndex((job) => job.id === updated.id)
     if (index >= 0) {
       jobs.value[index] = updated
     } else {
       jobs.value.push(updated)
     }
-    selectedId.value = updated.id
+    if (select) {
+      selectedId.value = updated.id
+    }
+  }
+
+  function focusJob(jobId: string): void {
+    if (jobs.value.some((job) => job.id === jobId)) {
+      selectedId.value = jobId
+    }
   }
 
   async function fetch(sessionId: string): Promise<number> {
@@ -74,7 +88,13 @@ export const useJobsStore = defineStore('jobs', () => {
     return run(async () => {
       const result = await api.fetchJobs(sessionId)
       for (const job of result.jobs) {
-        updateJob(job)
+        updateJob(job, false)
+      }
+      if (
+        result.jobs.length > 0 &&
+        !jobs.value.some((job) => job.id === selectedId.value && activeStates.has(job.state))
+      ) {
+        selectedId.value = result.jobs[0].id
       }
       return result.jobs.length
     })
@@ -129,6 +149,7 @@ export const useJobsStore = defineStore('jobs', () => {
     busy,
     error,
     setJobs,
+    focusJob,
     fetch,
     markOpened,
     confirmAndClaim,
@@ -136,3 +157,11 @@ export const useJobsStore = defineStore('jobs', () => {
     markInvalid
   }
 })
+
+function firstByStatePriority(jobs: Job[], priorities: string[]): Job | undefined {
+  for (const state of priorities) {
+    const match = jobs.find((job) => job.state === state)
+    if (match) return match
+  }
+  return undefined
+}

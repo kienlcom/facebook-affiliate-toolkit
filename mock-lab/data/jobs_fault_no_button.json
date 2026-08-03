@@ -1,0 +1,13 @@
+{
+  "settlement_threshold": 1,
+  "settlement_wait_seconds": 1,
+  "jobs": [
+    {
+      "external_id": "mock-no-button-001",
+      "target_id": "page-no-button",
+      "path": "/profiles/page-no-button?scenario=no_button",
+      "points": 600,
+      "minimum_claim_wait_seconds": 0
+    }
+  ]
+}

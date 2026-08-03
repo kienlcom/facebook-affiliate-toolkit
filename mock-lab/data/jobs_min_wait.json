@@ -1,0 +1,15 @@
+{
+  "settlement_threshold": 1,
+  "settlement_wait_seconds": 1,
+  "jobs": [
+    {
+      "external_id": "mock-wait-001",
+      "target_id": "page-wait",
+      "action": "FOLLOW",
+      "state": "FETCHED",
+      "path": "/profiles/page-wait?scenario=success",
+      "points": 600,
+      "minimum_claim_wait_seconds": 15
+    }
+  ]
+}

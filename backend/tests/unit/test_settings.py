@@ -9,7 +9,7 @@ from app.config.settings import Settings
 def make_settings(**overrides: object) -> Settings:
     values: dict[str, object] = {"TDS_ACCESS_TOKEN": "secret-token"}
     values.update(overrides)
-    return Settings(**values)
+    return Settings(_env_file=None, **values)
 
 
 def test_valid_settings_pass() -> None:
@@ -53,6 +53,22 @@ def test_local_browser_auto_open_settings_pass_for_local_backend() -> None:
     assert settings.AUTO_OPEN_ENABLED is True
 
 
+def test_host_companion_settings_pass_for_local_backend() -> None:
+    settings = make_settings(
+        APP_ENV="local",
+        LINK_OPENER_MODE="local_browser",
+        LINK_OPENER_TRANSPORT="host_companion",
+        AUTO_OPEN_ENABLED=True,
+        HOST_LINK_OPENER_TOKEN="x" * 64,
+    )
+
+    assert settings.LINK_OPENER_TRANSPORT == "host_companion"
+    assert (
+        settings.HOST_LINK_OPENER_TOKEN is not None
+        and settings.HOST_LINK_OPENER_TOKEN.get_secret_value() == "x" * 64
+    )
+
+
 def test_auto_open_enabled_with_manual_opener_fails() -> None:
     with pytest.raises(ValidationError):
         make_settings(
@@ -72,6 +88,51 @@ def test_local_browser_fails_closed_for_hosted_environment() -> None:
 def test_non_positive_auto_open_interval_fails() -> None:
     with pytest.raises(ValidationError):
         make_settings(AUTO_OPEN_INTERVAL_SECONDS=0)
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        (
+            {
+                "LINK_OPENER_MODE": "frontend_manual",
+                "LINK_OPENER_TRANSPORT": "host_companion",
+                "HOST_LINK_OPENER_TOKEN": "x" * 64,
+            },
+            "requires LINK_OPENER_MODE=local_browser",
+        ),
+        (
+            {
+                "APP_ENV": "local",
+                "LINK_OPENER_MODE": "local_browser",
+                "LINK_OPENER_TRANSPORT": "host_companion",
+                "HOST_LINK_OPENER_URL": "https://example.com/open",
+                "HOST_LINK_OPENER_TOKEN": "x" * 64,
+            },
+            "local HTTP /open endpoint",
+        ),
+        (
+            {
+                "APP_ENV": "local",
+                "LINK_OPENER_MODE": "local_browser",
+                "LINK_OPENER_TRANSPORT": "host_companion",
+                "HOST_LINK_OPENER_TOKEN": "short",
+            },
+            "at least 32 characters",
+        ),
+    ],
+)
+def test_invalid_host_companion_settings_fail(
+    overrides: dict[str, object],
+    message: str,
+) -> None:
+    with pytest.raises(ValidationError, match=message):
+        make_settings(**overrides)
+
+
+def test_non_positive_host_companion_timeout_fails() -> None:
+    with pytest.raises(ValidationError):
+        make_settings(HOST_LINK_OPENER_TIMEOUT_SECONDS=0)
 
 
 def test_auto_claim_true_fails() -> None:

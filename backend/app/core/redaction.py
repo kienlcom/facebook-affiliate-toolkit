@@ -21,7 +21,10 @@ SENSITIVE_KEYS = {
 
 def is_sensitive_key(key: str) -> bool:
     normalized = key.lower().replace("-", "_")
-    return normalized in {item.replace("-", "_") for item in SENSITIVE_KEYS}
+    return (
+        normalized in {item.replace("-", "_") for item in SENSITIVE_KEYS}
+        or normalized.endswith("_token")
+    )
 
 
 def redact_url(value: str) -> str:

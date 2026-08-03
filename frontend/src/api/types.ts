@@ -59,12 +59,14 @@ export interface SessionCounters {
 export interface AutoOpenStatus {
   available: boolean
   mode: 'frontend_manual' | 'local_browser'
+  target: 'host_pc' | 'current_device'
   enabled: boolean
   paused: boolean
   state: string
   interval_seconds: number
   next_open_at: string | null
   seconds_remaining: number | null
+  pending_job_id: string | null
   reason: string | null
 }
 

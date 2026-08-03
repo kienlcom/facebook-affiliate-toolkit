@@ -4,7 +4,7 @@ from functools import lru_cache
 from typing import Annotated, Any, Literal
 from urllib.parse import urlparse
 
-from pydantic import AnyHttpUrl, Field, field_validator, model_validator
+from pydantic import AnyHttpUrl, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -31,8 +31,12 @@ class Settings(BaseSettings):
     FETCH_MODE: Literal["manual"] = "manual"
     AUTO_POLL_ENABLED: bool = False
     LINK_OPENER_MODE: Literal["frontend_manual", "local_browser"] = "frontend_manual"
+    LINK_OPENER_TRANSPORT: Literal["direct", "host_companion"] = "direct"
     AUTO_OPEN_ENABLED: bool = False
     AUTO_OPEN_INTERVAL_SECONDS: int = 20
+    HOST_LINK_OPENER_URL: str = "http://host.docker.internal:18765/open"
+    HOST_LINK_OPENER_TOKEN: SecretStr | None = None
+    HOST_LINK_OPENER_TIMEOUT_SECONDS: float = 5
 
     MIN_SECONDS_BEFORE_CONFIRM: int = 2
     MIN_SECONDS_BEFORE_CLAIM: int = 3
@@ -100,6 +104,33 @@ class Settings(BaseSettings):
             )
         if self.AUTO_OPEN_INTERVAL_SECONDS <= 0:
             raise ValueError("AUTO_OPEN_INTERVAL_SECONDS must be > 0")
+        if self.HOST_LINK_OPENER_TIMEOUT_SECONDS <= 0:
+            raise ValueError("HOST_LINK_OPENER_TIMEOUT_SECONDS must be > 0")
+        if self.LINK_OPENER_TRANSPORT == "host_companion":
+            if self.LINK_OPENER_MODE != "local_browser":
+                raise ValueError(
+                    "LINK_OPENER_TRANSPORT=host_companion requires "
+                    "LINK_OPENER_MODE=local_browser"
+                )
+            opener_url = urlparse(self.HOST_LINK_OPENER_URL)
+            if (
+                opener_url.scheme != "http"
+                or opener_url.hostname
+                not in {"host.docker.internal", "127.0.0.1", "localhost"}
+                or opener_url.path != "/open"
+            ):
+                raise ValueError(
+                    "HOST_LINK_OPENER_URL must be a local HTTP /open endpoint"
+                )
+            opener_token = (
+                self.HOST_LINK_OPENER_TOKEN.get_secret_value().strip()
+                if self.HOST_LINK_OPENER_TOKEN is not None
+                else ""
+            )
+            if len(opener_token) < 32:
+                raise ValueError(
+                    "HOST_LINK_OPENER_TOKEN must contain at least 32 characters"
+                )
         if self.MAX_JOBS_PER_SESSION <= 0:
             raise ValueError("MAX_JOBS_PER_SESSION must be > 0")
         if self.MAX_SESSION_DURATION_MINUTES <= 0:

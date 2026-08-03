@@ -18,6 +18,7 @@ from app.jobs.state_machine import JobState
 from app.platforms.facebook.auto_advance import (
     AutoOpenCoordinator,
     AutoOpenRuntimeState,
+    LinkOpenTarget,
 )
 from app.providers.tds.models import load_provider_config
 from app.sessions.service import SessionService
@@ -208,6 +209,66 @@ async def test_auto_advance_is_sequential_and_pause_cancels_countdown(
         assert second is not None
         assert second.state == JobState.WAITING_USER
     assert sum(event == "job.auto_opened" for _, event, _ in ws_manager.events) == 2
+    await coordinator.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_current_device_waits_for_tap_without_opening_host_browser(
+    auto_open_state: AutoOpenTestState,
+) -> None:
+    opener = RecordingOpener()
+    ws_manager = RecordingWebSocketManager()
+    coordinator = build_coordinator(auto_open_state, opener, ws_manager)
+    await coordinator.register_session(auto_open_state.session_id)
+
+    status = await coordinator.set_target(
+        auto_open_state.session_id,
+        LinkOpenTarget.CURRENT_DEVICE,
+    )
+    await wait_until(
+        lambda: coordinator.status(auto_open_state.session_id).state
+        == AutoOpenRuntimeState.WAITING_DEVICE
+    )
+
+    status = coordinator.status(auto_open_state.session_id)
+    assert status.target == LinkOpenTarget.CURRENT_DEVICE
+    assert status.pending_job_id == auto_open_state.job_ids[0]
+    assert opener.urls == []
+    async with auto_open_state.session_factory() as db:
+        jobs = list(
+            await db.scalars(
+                select(Job)
+                .where(Job.session_id == auto_open_state.session_id)
+                .order_by(Job.fetched_at)
+            )
+        )
+        assert [job.state for job in jobs] == [
+            JobState.VALIDATED,
+            JobState.VALIDATED,
+        ]
+
+    ready_events = [
+        data
+        for _, event, data in ws_manager.events
+        if event == "job.open_ready"
+    ]
+    assert ready_events == [
+        {
+            "job_id": str(auto_open_state.job_ids[0]),
+            "url": "https://www.facebook.com/1000",
+            "target": "current_device",
+        }
+    ]
+
+    await coordinator.set_target(
+        auto_open_state.session_id,
+        LinkOpenTarget.HOST_PC,
+    )
+    await wait_until(
+        lambda: coordinator.status(auto_open_state.session_id).state
+        == AutoOpenRuntimeState.WAITING_USER
+    )
+    assert opener.urls == ["https://www.facebook.com/1000"]
     await coordinator.shutdown()
 
 

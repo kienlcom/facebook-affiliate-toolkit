@@ -1,0 +1,10 @@
+{
+  "settlement_threshold": 1,
+  "jobs": [
+    {
+      "external_id": "mock-invalid-001",
+      "path": "/profiles/page-invalid?scenario=success",
+      "points": 100
+    }
+  ]
+}

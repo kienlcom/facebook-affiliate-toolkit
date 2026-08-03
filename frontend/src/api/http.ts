@@ -18,7 +18,11 @@ const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.re
 
 export const http = axios.create({
   baseURL: apiBaseUrl,
-  timeout: 15_000,
+  // Backend tự retry TDS_MAX_RETRIES=3 lần với exponential backoff, mỗi lần
+  // tối đa TDS_REQUEST_TIMEOUT_SECONDS=15s (xem backend/app/providers/tds/client.py).
+  // Timeout ở đây phải lớn hơn tổng ngân sách retry đó, nếu không request vẫn
+  // đang chờ backend hợp lệ thì đã bị axios huỷ giữa chừng.
+  timeout: 60_000,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -91,6 +95,17 @@ export const api = {
     return (
       await http.post<AutoOpenStatus>(`/api/sessions/${sessionId}/auto-open`, {
         enabled
+      })
+    ).data
+  },
+
+  async setAutoOpenTarget(
+    sessionId: string,
+    target: AutoOpenStatus['target']
+  ): Promise<AutoOpenStatus> {
+    return (
+      await http.post<AutoOpenStatus>(`/api/sessions/${sessionId}/auto-open/target`, {
+        target
       })
     ).data
   },
