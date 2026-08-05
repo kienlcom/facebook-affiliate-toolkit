@@ -10,12 +10,15 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from app.api.routes.account import router as account_router
 from app.api.routes.health import router as health_router
 from app.api.routes.jobs import router as jobs_router
 from app.api.routes.profiles import router as profiles_router
+from app.api.routes.reels import pages_router as reel_pages_router
+from app.api.routes.reels import router as reels_router
 from app.api.routes.sessions import router as sessions_router
 from app.api.routes.ws import router as ws_router
 from app.claims.service import ClaimService
@@ -36,6 +39,9 @@ from app.providers.tds.client import TDSClient
 from app.providers.tds.error_mapping import map_provider_error
 from app.providers.tds.errors import TDSProviderError
 from app.providers.tds.models import load_provider_config
+from app.reels.manager import ReelRunManager
+from app.reels.pages import image_dir
+from app.reels.service import ReelService
 from app.sessions.service import SessionService
 from app.ws.manager import WebSocketManager
 
@@ -117,6 +123,12 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncIterator[None]:
         ws_manager=ws_manager,
         auto_open_coordinator=auto_open_coordinator,
     )
+    reel_run_manager = ReelRunManager()
+    reel_service = ReelService(
+        settings=settings,
+        session_factory=session_factory,
+        run_manager=reel_run_manager,
+    )
 
     async with engine.connect() as connection:
         await connection.execute(text("select 1"))
@@ -131,9 +143,12 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncIterator[None]:
     fastapi_app.state.session_service = session_service
     fastapi_app.state.jobs_service = jobs_service
     fastapi_app.state.claim_service = claim_service
+    fastapi_app.state.reel_run_manager = reel_run_manager
+    fastapi_app.state.reel_service = reel_service
     try:
         yield
     finally:
+        reel_run_manager.shutdown()
         await auto_open_coordinator.shutdown()
         await tds_client.aclose()
         await engine.dispose()
@@ -240,6 +255,21 @@ def create_app() -> FastAPI:
     fastapi_app.include_router(sessions_router)
     fastapi_app.include_router(jobs_router)
     fastapi_app.include_router(ws_router)
+    fastapi_app.include_router(reels_router)
+
+    # Mount trước route /reels/{slug}: trang HTML tham chiếu ảnh bằng đường dẫn
+    # tương đối (image/x.jpg), phân giải thành /reels/image/x.jpg.
+    for name in settings.REEL_IMAGE_DIRS:
+        directory = image_dir(name)
+        if directory is None:
+            logger.warning("reels.image_dir_missing", extra={"error_code": name})
+            continue
+        fastapi_app.mount(
+            f"/reels/{name}",
+            StaticFiles(directory=directory),
+            name=f"reel-images-{name}",
+        )
+    fastapi_app.include_router(reel_pages_router)
     return fastapi_app
 
 

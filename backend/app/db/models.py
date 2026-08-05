@@ -125,6 +125,26 @@ class ApiCall(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 
+class ReelLink(TimestampMixin, Base):
+    """Một trang ảnh mà reel runner sẽ lướt qua.
+
+    ``page_file`` là tên file HTML bare nằm ở repo root; route /reels/{slug} đọc
+    nó ra. ``url`` là đường dẫn tương đối để runner nối với base URL của backend.
+    """
+
+    __tablename__ = "reel_links"
+    __table_args__ = (UniqueConstraint("slug", name="uq_reel_links_slug"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    slug: Mapped[str] = mapped_column(String(255), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    page_file: Mapped[str] = mapped_column(String(255), nullable=False)
+    url: Mapped[str] = mapped_column(Text, nullable=False)
+    image_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
 class AppState(Base):
     __tablename__ = "app_state"
     __table_args__ = (UniqueConstraint("account_id", "key", name="uq_app_state_account_key"),)
@@ -142,3 +162,4 @@ Index("idx_jobs_session_state", Job.session_id, Job.state)
 Index("idx_jobs_fetched_at", Job.fetched_at.desc())
 Index("idx_attempts_job", JobAttempt.job_id, JobAttempt.created_at.desc())
 Index("idx_api_calls_account_created", ApiCall.account_id, ApiCall.created_at.desc())
+Index("idx_reel_links_enabled_order", ReelLink.enabled, ReelLink.sort_order)

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Image Viewer</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #121212;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: #fff;
+  }
+
+  .viewer {
+    position: relative;
+    width: min(90vw, 480px);
+  }
+
+  .stage {
+    width: 100%;
+    aspect-ratio: 9 / 16;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .stage img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .counter {
+    margin-top: 12px;
+    text-align: center;
+    font-size: 14px;
+    color: rgba(255, 255, 255, .6);
+  }
+
+  /* ---- Nút điều hướng lên / xuống ---- */
+  .DivFeedNavigationContainer {
+    top: 50%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .TUXButton {
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .08);
+    color: #fff;
+    transition: background .2s;
+  }
+
+  .TUXButton:hover:not(:disabled) { background: rgba(255, 255, 255, .18); }
+
+  .TUXButton--disabled,
+  .TUXButton:disabled {
+    opacity: .34;
+    cursor: not-allowed;
+  }
+
+  .TUXButton-content,
+  .TUXButton-iconContainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .TUXButton-iconContainer svg { font-size: 24px; }
+</style>
+</head>
+<body>
+
+<div class="viewer">
+  <div class="stage">
+    <img id="photo" alt="">
+  </div>
+  <div class="counter"><span id="current">1</span> / <span id="total">0</span></div>
+
+  <div class="DivFeedNavigationContainer" style="position: absolute; transform: translateY(-50%) translateX(100%); justify-content: center; inset-inline-end: -1rem; inset-inline-start: unset;">
+    <div class="css-1dux0b3">
+      <button class="TUXButton TUXButton--capsule TUXButton--medium TUXButton--secondary TUXButton--disabled action-item" aria-disabled="true" disabled="" type="button" data-e2e="feed-navigation-prev">
+        <div class="TUXButton-content">
+          <div class="TUXButton-iconContainer">
+            <svg fill="currentColor" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"><path d="m24 19.25 13.67 13.67a1 1 0 0 0 1.41 0l1.84-1.84a1 1 0 0 0 0-1.41L24.71 13.46a1 1 0 0 0-1.42 0L7.1 29.66a1 1 0 0 0 0 1.42l1.83 1.84a1 1 0 0 0 1.41 0L24 19.25Z"></path></svg>
+          </div>
+        </div>
+      </button>
+    </div>
+    <div class="css-1dux0b3">
+      <button class="TUXButton TUXButton--capsule TUXButton--medium TUXButton--secondary action-item" aria-disabled="false" type="button" data-e2e="feed-navigation-next">
+        <div class="TUXButton-content">
+          <div class="TUXButton-iconContainer">
+            <svg fill="currentColor" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"><path d="m24 28.75 13.67-13.67a1 1 0 0 1 1.41 0l1.84 1.84a1 1 0 0 1 0 1.41L24.71 34.54a1 1 0 0 1-1.42 0L7.1 18.34a1 1 0 0 1 0-1.42l1.83-1.84a1 1 0 0 1 1.41 0L24 28.75Z"></path></svg>
+          </div>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const images = [
+    "image/z8116908290326_631228aa07ec1f32e858d0f72dbee1ab.jpg",
+    "image/z8116908290815_917b8b52780769841c347c90ef48d552.jpg",
+    "image/z8116908300439_c0288d3369bbfabe995da72a9cf37a4a.jpg",
+    "image/z8116908300663_d1af5134b71290e869cff01b57ecfea3.jpg",
+    "image/z8116908307534_37677599a9a8451118a32f83f1198b22.jpg",
+    "image/z8116908313718_44cdd008c01999e929657084be96efb9.jpg",
+    "image/z8116908319184_79d946981f0fb502b5a219f758d9a392.jpg"
+  ];
+
+  const photo = document.getElementById("photo");
+  const currentEl = document.getElementById("current");
+  const prevBtn = document.querySelector('[data-e2e="feed-navigation-prev"]');
+  const nextBtn = document.querySelector('[data-e2e="feed-navigation-next"]');
+
+  let index = 0;
+  document.getElementById("total").textContent = images.length;
+
+  function setDisabled(btn, disabled) {
+    btn.disabled = disabled;
+    btn.setAttribute("aria-disabled", String(disabled));
+    btn.classList.toggle("TUXButton--disabled", disabled);
+  }
+
+  function render() {
+    photo.src = images[index];
+    photo.alt = "Ảnh " + (index + 1);
+    currentEl.textContent = index + 1;
+    setDisabled(prevBtn, index === 0);
+    setDisabled(nextBtn, index === images.length - 1);
+  }
+
+  function go(step) {
+    const next = index + step;
+    if (next < 0 || next >= images.length) return;
+    index = next;
+    render();
+  }
+
+  prevBtn.addEventListener("click", () => go(-1));
+  nextBtn.addEventListener("click", () => go(1));
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowUp") go(-1);
+    if (e.key === "ArrowDown") go(1);
+  });
+
+  render();
+</script>
+
+</body>
+</html>

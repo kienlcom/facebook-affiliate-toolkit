@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Construction, FlaskConical, LayoutDashboard, PanelsTopLeft, ShieldCheck } from '@lucide/vue'
+import { Construction, FlaskConical, LayoutDashboard, PanelsTopLeft, ShieldCheck, ShoppingBag } from '@lucide/vue'
 </script>
 
 <template>
@@ -22,9 +22,13 @@ import { Construction, FlaskConical, LayoutDashboard, PanelsTopLeft, ShieldCheck
           <FlaskConical :size="18" aria-hidden="true" />
           <span>Mock Lab</span>
         </router-link>
-        <router-link class="sidebar-link" to="/coming-soon">
+        <router-link class="sidebar-link" to="/reels">
           <Construction :size="18" aria-hidden="true" />
           <span>Chuẩn bị</span>
+        </router-link>
+        <router-link class="sidebar-link" to="/tiktok-shop">
+          <ShoppingBag :size="18" aria-hidden="true" />
+          <span>TikTok Shop</span>
         </router-link>
       </nav>
 

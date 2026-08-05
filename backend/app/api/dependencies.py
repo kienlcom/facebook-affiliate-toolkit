@@ -7,6 +7,7 @@ from app.jobs.service import JobsService
 from app.platforms.facebook.auto_advance import AutoOpenCoordinator
 from app.providers.tds.client import TDSClient
 from app.providers.tds.models import TDSProviderConfig
+from app.reels.service import ReelService
 from app.sessions.service import SessionService
 from app.ws.manager import WebSocketManager
 
@@ -37,3 +38,7 @@ def get_provider_config(request: Request) -> TDSProviderConfig:
 
 def get_ws_manager(request: Request) -> WebSocketManager:
     return request.app.state.ws_manager
+
+
+def get_reel_service(request: Request) -> ReelService:
+    return request.app.state.reel_service

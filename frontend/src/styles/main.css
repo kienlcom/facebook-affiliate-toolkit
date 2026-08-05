@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
@@ -39,6 +43,11 @@ body {
 button,
 select,
 textarea {
+  font: inherit;
+  letter-spacing: 0;
+}
+
+input {
   font: inherit;
   letter-spacing: 0;
 }
@@ -500,6 +509,24 @@ textarea {
   color: var(--ink);
 }
 
+input[type="text"],
+input[type="url"],
+input[type="number"] {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid #bfcbd1;
+  border-radius: 5px;
+  outline: none;
+  background: #fff;
+  color: var(--ink);
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--green);
+}
+
 select {
   padding: 0 34px 0 11px;
 }
@@ -511,6 +538,7 @@ textarea {
 }
 
 select:focus,
+input:focus,
 textarea:focus,
 button:focus-visible {
   outline: 3px solid rgba(36, 104, 167, 0.2);
@@ -581,6 +609,10 @@ button:focus-visible {
 .button-danger {
   background: var(--red);
   color: #fff;
+}
+
+.button-danger:hover:not(:disabled) {
+  background: #951c13;
 }
 
 .start-button {
@@ -1114,6 +1146,159 @@ button:focus-visible {
   justify-content: flex-end;
 }
 
+.tiktok-shop-layout {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.9fr) minmax(420px, 1.1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.tiktok-panel {
+  padding: 20px;
+}
+
+.channel-form {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.channel-list {
+  display: grid;
+  gap: 9px;
+  margin-top: 16px;
+}
+
+.channel-item {
+  min-width: 0;
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid #e0e6e9;
+  border-radius: 6px;
+  background: var(--surface-soft);
+}
+
+.channel-toggle {
+  min-width: 36px;
+}
+
+.channel-copy {
+  min-width: 0;
+}
+
+.channel-copy strong,
+.channel-copy a {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.channel-copy strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.channel-copy a {
+  margin-top: 4px;
+  color: var(--blue);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.controller-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.controller-actions {
+  display: grid;
+  grid-template-columns: 1.25fr repeat(3, minmax(96px, 0.7fr));
+  gap: 10px;
+}
+
+.start-scroll-button {
+  min-height: 62px;
+  background: var(--green);
+  color: #fff;
+  font-size: 18px;
+}
+
+.start-scroll-button:hover:not(:disabled) {
+  background: var(--green-dark);
+}
+
+.control-button {
+  min-height: 62px;
+  font-size: 14px;
+}
+
+.buy-button {
+  background: #c96f00;
+  color: #fff;
+}
+
+.buy-button:hover:not(:disabled) {
+  background: #a95e00;
+}
+
+.skip-button {
+  border-color: #b7c2c8;
+  background: #eef2f4;
+  color: #33434e;
+}
+
+.skip-button:hover:not(:disabled) {
+  background: #dfe7eb;
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.interval-control {
+  grid-column: 1 / -1;
+}
+
+.controller-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  background: var(--line);
+}
+
+.controller-meta > div {
+  min-width: 0;
+  padding: 12px;
+  background: var(--surface-soft);
+}
+
+.controller-meta dt {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.controller-meta dd {
+  margin: 5px 0 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .spinning {
   animation: spin 0.9s linear infinite;
 }
@@ -1201,8 +1386,13 @@ button:focus-visible {
 
   .dashboard-grid,
   .session-workspace,
-  .mock-lab-layout {
+  .mock-lab-layout,
+  .tiktok-shop-layout {
     grid-template-columns: 1fr;
+  }
+
+  .controller-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .lab-step-grid {
@@ -1300,7 +1490,13 @@ button:focus-visible {
   .lab-actions,
   .lab-step-grid,
   .lab-meta,
-  .lab-counters {
+  .lab-counters,
+  .config-grid,
+  .controller-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .controller-actions {
     grid-template-columns: 1fr;
   }
 }

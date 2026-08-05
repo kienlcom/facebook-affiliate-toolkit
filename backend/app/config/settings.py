@@ -38,6 +38,18 @@ class Settings(BaseSettings):
     HOST_LINK_OPENER_TOKEN: SecretStr | None = None
     HOST_LINK_OPENER_TIMEOUT_SECONDS: float = 5
 
+    # Reel runner — lướt ảnh trên các trang trong bảng reel_links.
+    # REEL_BASE_URL phải là origin của chính backend: Selenium mở URL này trực
+    # tiếp, không đi qua vite proxy nên không suy ra được từ header Host.
+    REEL_BASE_URL: str = "http://127.0.0.1:8000"
+    REEL_DWELL_SECONDS: float = 5
+    REEL_SELECTOR_TIMEOUT_SECONDS: float = 10
+    REEL_MAX_IMAGES_PER_LINK: int = 200
+    REEL_RUNNER_HEADED: bool = True
+    REEL_IMAGE_DIRS: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: ["image", "image2"]
+    )
+
     MIN_SECONDS_BEFORE_CONFIRM: int = 2
     MIN_SECONDS_BEFORE_CLAIM: int = 3
     MAX_JOBS_PER_SESSION: int = 20
@@ -68,6 +80,21 @@ class Settings(BaseSettings):
             parsed = urlparse(origin)
             if parsed.scheme not in {"http", "https"} or not parsed.netloc:
                 raise ValueError(f"Invalid CORS origin: {origin}")
+        return value
+
+    @field_validator("REEL_IMAGE_DIRS", mode="before")
+    @classmethod
+    def parse_reel_image_dirs(cls, value: Any) -> list[str]:
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
+
+    @field_validator("REEL_IMAGE_DIRS")
+    @classmethod
+    def validate_reel_image_dirs(cls, value: list[str]) -> list[str]:
+        for name in value:
+            if "/" in name or "\\" in name or name.startswith(".") or ".." in name:
+                raise ValueError(f"REEL_IMAGE_DIRS entry must be a bare directory name: {name}")
         return value
 
     @field_validator("DATABASE_URL")
@@ -131,6 +158,15 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "HOST_LINK_OPENER_TOKEN must contain at least 32 characters"
                 )
+        reel_base = urlparse(self.REEL_BASE_URL)
+        if reel_base.scheme not in {"http", "https"} or not reel_base.netloc:
+            raise ValueError("REEL_BASE_URL must be a valid http(s) origin")
+        if self.REEL_DWELL_SECONDS <= 0:
+            raise ValueError("REEL_DWELL_SECONDS must be > 0")
+        if self.REEL_SELECTOR_TIMEOUT_SECONDS <= 0:
+            raise ValueError("REEL_SELECTOR_TIMEOUT_SECONDS must be > 0")
+        if self.REEL_MAX_IMAGES_PER_LINK <= 0:
+            raise ValueError("REEL_MAX_IMAGES_PER_LINK must be > 0")
         if self.MAX_JOBS_PER_SESSION <= 0:
             raise ValueError("MAX_JOBS_PER_SESSION must be > 0")
         if self.MAX_SESSION_DURATION_MINUTES <= 0:

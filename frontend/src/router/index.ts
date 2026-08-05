@@ -14,9 +14,14 @@ export const router = createRouter({
       component: () => import('../views/MockLabView.vue')
     },
     {
-      path: '/coming-soon',
-      name: 'coming-soon',
-      component: () => import('../views/ComingSoonView.vue')
+      path: '/reels',
+      name: 'reels',
+      component: () => import('../views/ReelRunnerView.vue')
+    },
+    {
+      path: '/tiktok-shop',
+      name: 'tiktok-shop',
+      component: () => import('../views/Home.vue')
     },
     {
       path: '/sessions/:id',
